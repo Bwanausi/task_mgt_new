@@ -89,11 +89,10 @@ function Header() {
         {menuOpen && (
           <div className="md:hidden bg-[#f4e6e8] px-4 py-3 space-y-2">
             <a href="/" className="block hover:text-[#f4e6e8]">Home</a>
-            <a href="/services" className="block hover:text-[#f4e6e8]">Services</a>
-            <a href="/doctors" className="block hover:text-[#f4e6e8]">Doctors</a>
-            <a href="/publication" className="block hover:text-[#f4e6e8]">Publication</a>
-            <a href="/training" className="block hover:text-[#f4e6e8]">Training</a>
-            <a href="/about" className="block hover:text-[#f4e6e8]">About Us</a>
+            <a href="/services" className="block hover:text-[#f4e6e8]">Our Programs</a>
+            <a href="/doctors" className="block hover:text-[#f4e6e8]">Donate</a>
+            <a href="/publication" className="block hover:text-[#f4e6e8]">About Us</a>
+            <a href="/training" className="block hover:text-[#f4e6e8]">Get Involved</a>
             <a href="/contact" className="block hover:text-[#f4e6e8]">Contact</a>
           </div>
         )}
