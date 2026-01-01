@@ -87,7 +87,7 @@ function Header() {
 
         {/* Mobile Menu */}
         {menuOpen && (
-          <div className="md:hidden bg-[#f4e6e8] px-4 py-3 space-y-2">
+          <div className="md:hidden bg-topcolor px-4 py-3 space-y-2">
             <a href="/" className="block hover:text-[#f4e6e8]">Home</a>
             <a href="/services" className="block hover:text-[#f4e6e8]">Our Programs</a>
             <a href="/doctors" className="block hover:text-[#f4e6e8]">Donate</a>
