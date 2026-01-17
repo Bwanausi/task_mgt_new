@@ -3,9 +3,9 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #2567A9;
-  --color-main:#026585;
-   --color-topcolor:#ddf1f4;
+  --color-brand:#F4A460;
+  --color-main:#A0522D;
+   --color-topcolor:#F5F5DC;
 
-  --color-brand-80: color-mix(in srgb, #026585 50%, white);
+  --color-brand-80: color-mix(in srgb, #F4A460 50%, white);
 }
