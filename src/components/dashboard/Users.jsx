@@ -10,51 +10,46 @@ export default function Users() {
     // Replace with API data later
     const users = [
         { id: 1, username: "john", role: "DIRECTOR", status: "ACTIVE" },
-        { id: 2, username: "mary", role: "NORMAL_USER", status: "ACTIVE" }
+        { id: 2, username: "mary", role: "NORMAL_USER", status: "ACTIVE" },
+        { id: 3, username: "paul", role: "ADMIN", status: "INACTIVE" },
     ];
 
     return (
-        <div className="bg-white p-6 rounded shadow">
-            <h2 className="text-xl font-bold mb-4">User Management</h2>
+        <div className="max-w-4xl mx-auto">
+            <h2 className="text-center text-xl font-semibold text-teal-800 mb-6">
+                User Management
+            </h2>
 
-            <table className="w-full border">
-                <thead className="bg-gray-50">
-                <tr>
-                    <TH>Username</TH>
-                    <TH>Role</TH>
-                    <TH>Status</TH>
-                    <TH>Action</TH>
-                </tr>
-                </thead>
-                <tbody>
-                {users.map(u => (
-                    <tr key={u.id} className="border-t">
-                        <TD>{u.username}</TD>
-                        <TD>{u.role}</TD>
-                        <TD>{u.status}</TD>
-                        <TD>
-                            <button className="text-brand font-semibold hover:underline">
+            <div className="space-y-4">
+                {users.map((u) => (
+                    <div
+                        key={u.id}
+                        className="bg-white border border-gray-200 rounded p-4 hover:shadow-md hover:bg-gray-50 transition flex justify-between items-center"
+                    >
+                        <div className="flex-1">
+                            <p className="text-sm font-semibold">{u.username}</p>
+                            <p className="text-xs text-gray-500">{u.role}</p>
+                        </div>
+
+                        <div className="flex items-center gap-6">
+              <span
+                  className={`px-2 py-1 text-xs rounded font-medium ${
+                      u.status === "ACTIVE" ? "bg-green-500 text-white" : "bg-red-500 text-white"
+                  }`}
+              >
+                {u.status}
+              </span>
+                            <button className="text-teal-700 font-semibold hover:underline text-sm">
                                 Edit
                             </button>
-                        </TD>
-                    </tr>
+                        </div>
+                    </div>
                 ))}
-                </tbody>
-            </table>
+            </div>
         </div>
     );
 }
 
-const TH = ({ children }) => (
-    <th className="px-4 py-2 text-left text-sm uppercase text-gray-500">
-        {children}
-    </th>
-);
-
-const TD = ({ children }) => (
-    <td className="px-4 py-2">{children}</td>
-);
-
 const NoAccess = () => (
-    <p className="text-red-500 font-semibold">Access Denied</p>
+    <p className="text-red-500 font-semibold text-center mt-4">Access Denied</p>
 );

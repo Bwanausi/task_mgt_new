@@ -1,115 +1,217 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "../../auth/AuthContext";
+import { useState } from "react";
+import { FaEdit, FaTrash } from "react-icons/fa";
 
-// Dummy users for now, replace with backend API
-const dummyUsers = [
-    { id: 1, username: "John Doe" },
-    { id: 2, username: "Jane Smith" },
-    { id: 3, username: "Fred Bwanausi" }
-];
+export default function AllTasks() {
+    const [tasks, setTasks] = useState([
+        {
+            id: 1,
+            title: "DSA",
+            description: "Solving 1 DSA question",
+            dueDate: "Nov 3, 2023, 5:30 AM",
+            priority: "Medium",
+            category: "Study",
+            completed: false,
+        },
+        {
+            id: 2,
+            title: "Walk",
+            description: "Go for a jogging",
+            dueDate: "Nov 3, 2023, 5:30 AM",
+            priority: "High",
+            category: "Health",
+            completed: true,
+        },
+    ]);
 
-export default function CreateTask() {
-    const { user } = useAuth();
+    const [newTask, setNewTask] = useState({
+        title: "",
+        description: "",
+        dueDate: "",
+        priority: "Low",
+        category: "",
+    });
 
-    // Only CEO with TASK_CREATE can access
-    if (!user.permissions.includes("TASK_CREATE")) {
-        return <NoAccess />;
-    }
+    const [selectedCategory, setSelectedCategory] = useState("");
 
-    const [title, setTitle] = useState("");
-    const [assignedTo, setAssignedTo] = useState("");
-    const [dueDate, setDueDate] = useState("");
-    const [status, setStatus] = useState("PENDING");
+    const priorityColor = {
+        Low: "bg-green-500",
+        Medium: "bg-yellow-500",
+        High: "bg-red-500",
+    };
 
-    const handleSubmit = e => {
+    const categories = [...new Set(tasks.map((t) => t.category).filter(Boolean))];
+
+    const filteredTasks = selectedCategory
+        ? tasks.filter((t) => t.category === selectedCategory)
+        : tasks;
+
+    const handleAddTask = (e) => {
         e.preventDefault();
+        if (!newTask.title || !newTask.category) return;
 
-        const newTask = {
-            title,
-            assignedTo,
-            dueDate,
-            status
-        };
+        const id = tasks.length ? tasks[tasks.length - 1].id + 1 : 1;
+        setTasks([...tasks, { ...newTask, id, completed: false }]);
+        setNewTask({
+            title: "",
+            description: "",
+            dueDate: "",
+            priority: "Low",
+            category: "",
+        });
+    };
 
-        // 🔹 Replace with API call
-        console.log("Creating Task:", newTask);
+    const toggleComplete = (id) => {
+        setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+    };
 
-        alert(`Task "${title}" assigned to ${assignedTo}!`);
-
-        // Reset form
-        setTitle("");
-        setAssignedTo("");
-        setDueDate("");
-        setStatus("PENDING");
+    const deleteTask = (id) => {
+        setTasks(tasks.filter(t => t.id !== id));
     };
 
     return (
-        <div className="bg-white p-6 rounded shadow max-w-lg mx-auto">
-            <h2 className="text-xl font-bold mb-4">Create & Assign Task</h2>
+        <div className="max-w-6xl mx-auto grid grid-cols-3 gap-6">
+            {/* MAIN TASK LIST */}
+            <div className="col-span-2">
+                <h2 className="text-center text-xl font-semibold text-teal-800 mb-6">
+                    All Tasks
+                </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                    <label className="block mb-1 font-semibold">Task Title</label>
+                {/* ADD TASK FORM */}
+                <form
+                    className="bg-white p-4 border border-gray-200 rounded mb-6 space-y-3"
+                    onSubmit={handleAddTask}
+                >
+                    <h3 className="font-semibold mb-2">Add New Task</h3>
                     <input
                         type="text"
-                        value={title}
-                        onChange={e => setTitle(e.target.value)}
-                        className="w-full border px-3 py-2 rounded"
-                        required
+                        placeholder="Title"
+                        className="w-full p-2 border rounded"
+                        value={newTask.title}
+                        onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
                     />
-                </div>
-
-                <div>
-                    <label className="block mb-1 font-semibold">Assign To</label>
+                    <input
+                        type="text"
+                        placeholder="Description"
+                        className="w-full p-2 border rounded"
+                        value={newTask.description}
+                        onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                    />
+                    <input
+                        type="date"
+                        className="w-full p-2 border rounded"
+                        value={newTask.dueDate}
+                        onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+                    />
+                    <input
+                        type="text"
+                        placeholder="Category"
+                        className="w-full p-2 border rounded"
+                        value={newTask.category}
+                        onChange={(e) => setNewTask({ ...newTask, category: e.target.value })}
+                    />
                     <select
-                        value={assignedTo}
-                        onChange={e => setAssignedTo(e.target.value)}
-                        className="w-full border px-3 py-2 rounded"
-                        required
+                        className="w-full p-2 border rounded"
+                        value={newTask.priority}
+                        onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
                     >
-                        <option value="">Select user</option>
-                        {dummyUsers.map(u => (
-                            <option key={u.id} value={u.username}>
-                                {u.username}
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                    <button
+                        type="submit"
+                        className="bg-teal-700 text-white px-4 py-2 rounded hover:bg-teal-800"
+                    >
+                        Add Task
+                    </button>
+                </form>
+
+                {/* TASK CARDS */}
+                <div className="space-y-6">
+                    {filteredTasks.map((task) => (
+                        <div
+                            key={task.id}
+                            className={`bg-white border border-gray-200 rounded p-5 hover:shadow-md hover:bg-gray-50 transition`}
+                        >
+                            <p className="text-sm mb-1">
+                                <span className="font-semibold">Title:</span> {task.title}
+                            </p>
+
+                            <p className="text-sm mb-1">
+                                <span className="font-semibold">Description:</span> {task.description}
+                            </p>
+
+                            <p className="text-sm mb-3">
+                                <span className="font-semibold">Due Date:</span>{" "}
+                                <span className="text-red-500">{task.dueDate}</span>
+                            </p>
+
+                            {/* PRIORITY BADGE */}
+                            <div className="flex items-center gap-2 mb-4">
+                <span
+                    className={`px-2 py-1 rounded text-white text-xs ${priorityColor[task.priority]}`}
+                >
+                  {task.priority}
+                </span>
+                            </div>
+
+                            {/* ACTIONS */}
+                            <div className="flex gap-4 text-gray-500 items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={task.completed}
+                                    onChange={() => toggleComplete(task.id)}
+                                    className="mr-2"
+                                />
+                                <button className="hover:text-teal-700">
+                                    <FaEdit />
+                                </button>
+                                <button
+                                    className="hover:text-red-600"
+                                    onClick={() => deleteTask(task.id)}
+                                >
+                                    <FaTrash />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* RIGHT PANEL */}
+            <div className="col-span-1">
+                {/* CATEGORY FILTER */}
+                <div className="p-4 border border-gray-200 rounded mb-6">
+                    <label className="block mb-2 font-semibold">Filter by Category</label>
+                    <select
+                        className="w-full p-2 border rounded"
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                    >
+                        <option value="">All</option>
+                        {categories.map((cat) => (
+                            <option key={cat} value={cat}>
+                                {cat}
                             </option>
                         ))}
                     </select>
                 </div>
 
-                <div>
-                    <label className="block mb-1 font-semibold">Due Date</label>
-                    <input
-                        type="date"
-                        value={dueDate}
-                        onChange={e => setDueDate(e.target.value)}
-                        className="w-full border px-3 py-2 rounded"
-                        required
-                    />
+                {/* COMPLETED TASKS */}
+                <div className="p-4 border border-gray-200 rounded">
+                    <h3 className="font-semibold mb-2">Completed Tasks</h3>
+                    <ul className="space-y-1">
+                        {tasks
+                            .filter((t) => t.completed)
+                            .map((task) => (
+                                <li key={task.id} className="flex items-center">
+                                    <input type="checkbox" checked readOnly className="mr-2" />
+                                    <span className="line-through text-gray-500">{task.title}</span>
+                                </li>
+                            ))}
+                    </ul>
                 </div>
-
-                <div>
-                    <label className="block mb-1 font-semibold">Status</label>
-                    <select
-                        value={status}
-                        onChange={e => setStatus(e.target.value)}
-                        className="w-full border px-3 py-2 rounded"
-                    >
-                        <option value="PENDING">Pending</option>
-                        <option value="COMPLETED">Completed</option>
-                    </select>
-                </div>
-
-                <button
-                    type="submit"
-                    className="bg-brand text-white px-4 py-2 rounded hover:bg-brand-80 transition"
-                >
-                    Create Task
-                </button>
-            </form>
+            </div>
         </div>
     );
 }
-
-const NoAccess = () => (
-    <p className="text-red-500 font-semibold text-center">Access Denied</p>
-);

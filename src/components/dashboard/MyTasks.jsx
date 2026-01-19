@@ -1,114 +1,130 @@
-import { useAuth } from "../../auth/AuthContext";
+import { useState } from "react";
+import { FaEdit, FaTrash } from "react-icons/fa";
 
-/**
- * MyTasks Page
- * - Normal User → own assigned tasks
- * - Director → own + department tasks (backend controlled)
- * - Admin/CEO → optional visibility
- */
 export default function MyTasks() {
-    const { user } = useAuth();
-
-    const canView =
-        user.permissions.includes("TASK_VIEW_ASSIGNED") ||
-        user.permissions.includes("TASK_VIEW_DEPARTMENT") ||
-        user.permissions.includes("TASK_VIEW_ALL");
-
-    if (!canView) {
-        return <NoAccess />;
-    }
-
-    // 🔁 Replace with backend API
-    const tasks = [
+    // sample data (replace with API data)
+    const [tasks, setTasks] = useState([
         {
             id: 1,
-            title: "Submit weekly report",
-            status: "PENDING",
-            dueDate: "2026-01-20"
+            title: "DSA",
+            description: "Solving 1 DSA question",
+            dueDate: "Nov 3, 2023, 5:30 AM",
+            priority: "Medium",
+            category: "Study",
+            completed: false,
         },
         {
             id: 2,
-            title: "Fix login issue",
-            status: "COMPLETED",
-            dueDate: "2026-01-15"
-        }
-    ];
+            title: "Walk",
+            description: "Go for a jogging",
+            dueDate: "Nov 3, 2023, 5:30 AM",
+            priority: "High",
+            category: "Health",
+            completed: true,
+        },
+    ]);
+
+    const [selectedCategory, setSelectedCategory] = useState("");
+
+    const priorityColor = {
+        Low: "bg-green-500",
+        Medium: "bg-yellow-500",
+        High: "bg-red-500",
+    };
+
+    // get unique categories for dropdown
+    const categories = [...new Set(tasks.map((t) => t.category))];
+
+    // filter tasks by selected category
+    const filteredTasks = selectedCategory
+        ? tasks.filter((t) => t.category === selectedCategory)
+        : tasks;
 
     return (
-        <div className="bg-white p-6 rounded shadow">
-            <h2 className="text-xl font-bold mb-4">My Tasks</h2>
+        <div className="max-w-6xl mx-auto grid grid-cols-3 gap-6">
+            {/* MAIN TASK LIST */}
+            <div className="col-span-2">
+                <h2 className="text-center text-xl font-semibold text-teal-800 mb-6">
+                    My Task List
+                </h2>
 
-            <table className="w-full border">
-                <thead className="bg-gray-50">
-                <tr>
-                    <TH>Task</TH>
-                    <TH>Status</TH>
-                    <TH>Due Date</TH>
-                    <TH>Actions</TH>
-                </tr>
-                </thead>
+                <div className="space-y-6">
+                    {filteredTasks.map((task) => (
+                        <div
+                            key={task.id}
+                            className="bg-white border border-gray-200 rounded p-5 hover:shadow-md hover:bg-gray-50 transition"
+                        >
+                            <p className="text-sm mb-1">
+                                <span className="font-semibold">Title:</span> {task.title}
+                            </p>
 
-                <tbody>
-                {tasks.map(task => (
-                    <tr key={task.id} className="border-t">
-                        <TD>{task.title}</TD>
-                        <TD>
-                            <StatusBadge status={task.status} />
-                        </TD>
-                        <TD>{task.dueDate}</TD>
-                        <TD>
-                            <Actions task={task} user={user} />
-                        </TD>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
+                            <p className="text-sm mb-1">
+                                <span className="font-semibold">Description:</span>{" "}
+                                {task.description}
+                            </p>
+
+                            <p className="text-sm mb-3">
+                                <span className="font-semibold">Due Date:</span>{" "}
+                                <span className="text-red-500">{task.dueDate}</span>
+                            </p>
+
+                            {/* PRIORITY BADGE */}
+                            <div className="flex items-center gap-2 mb-4">
+                <span
+                    className={`px-2 py-1 rounded text-white text-xs ${priorityColor[task.priority]}`}
+                >
+                  {task.priority}
+                </span>
+                            </div>
+
+                            {/* ACTIONS */}
+                            <div className="flex gap-4 text-gray-500">
+                                <button className="hover:text-teal-700">
+                                    <FaEdit />
+                                </button>
+                                <button className="hover:text-red-600">
+                                    <FaTrash />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* RIGHT-SIDE PANEL */}
+            <div className="col-span-1">
+                {/* CATEGORY FILTER */}
+                <div className="p-4 border border-gray-200 rounded mb-6">
+                    <label className="block mb-2 font-semibold">Filter by Category</label>
+                    <select
+                        className="w-full p-2 border rounded"
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                    >
+                        <option value="">All</option>
+                        {categories.map((cat) => (
+                            <option key={cat} value={cat}>
+                                {cat}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* COMPLETED TASKS */}
+                <div className="p-4 border border-gray-200 rounded">
+                    <h3 className="font-semibold mb-2">Completed Tasks</h3>
+                    <ul className="space-y-1">
+                        {tasks
+                            .filter((t) => t.completed)
+                            .map((task) => (
+                                <li key={task.id} className="flex items-center">
+                                    <input type="checkbox" checked readOnly className="mr-2" />
+                                    <span className="line-through text-gray-500">{task.title}</span>
+                                </li>
+                            ))}
+                    </ul>
+                </div>
+            </div>
         </div>
     );
 }
-
-/* ================= Helpers ================= */
-
-const Actions = ({ task, user }) => (
-    <div className="flex gap-3">
-        {user.permissions.includes("TASK_UPDATE_STATUS") && (
-            <button className="text-blue-600 font-semibold hover:underline">
-                Update Status
-            </button>
-        )}
-
-        {user.permissions.includes("TASK_COMMENT") && (
-            <button className="text-green-600 font-semibold hover:underline">
-                Comment
-            </button>
-        )}
-    </div>
-);
-
-const TH = ({ children }) => (
-    <th className="px-4 py-2 text-left text-sm uppercase text-gray-500">
-        {children}
-    </th>
-);
-
-const TD = ({ children }) => (
-    <td className="px-4 py-2">{children}</td>
-);
-
-const StatusBadge = ({ status }) => {
-    const colors = {
-        COMPLETED: "text-green-600",
-        PENDING: "text-yellow-600",
-        REJECTED: "text-red-600"
-    };
-
-    return (
-        <span className={`font-semibold ${colors[status]}`}>
-      {status}
-    </span>
-    );
-};
-
-const NoAccess = () => (
-    <p className="text-red-500 font-semibold">Access Denied</p>
-);
