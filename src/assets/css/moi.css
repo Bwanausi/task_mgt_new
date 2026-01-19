@@ -7,5 +7,7 @@
   --color-main:#A0522D;
    --color-topcolor:#F5F5DC;
 
-  --color-brand-80: color-mix(in srgb, #F4A460 50%, white);
+  --color-brand-800: color-mix(in srgb, #0f4c5c 50%, white);
+    --color-brand-900: color-mix(in srgb, #0b3c48 50%, white);
+
 }

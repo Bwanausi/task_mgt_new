@@ -30,16 +30,32 @@ export default function Dashboard() {
             case "users": return <Users />;
             case "reports": return <Reports />;
             case "settings": return <Settings />;
-            default: return <div className="p-6 text-lg">Welcome back 👋</div>;
+            default:
+                return <div className="p-6 text-lg">Welcome back 👋</div>;
         }
     };
 
     return (
-        <div className="min-h-screen flex bg-topcolor">
-            <Sidebar user={user} active={active} onChange={setActive} />
-            <div className="flex-1 flex flex-col">
-                <Topbar user={user} onLogout={handleLogout} />
-                <main className="flex-1 p-6 bg-gray-100">{renderContent()}</main>
+        <div className="min-h-screen bg-topcolor">
+
+            {/* 🔹 FULL WIDTH TOPBAR */}
+            <Topbar user={user} onLogout={handleLogout} />
+
+            {/* 🔹 BELOW TOPBAR */}
+            <div className="flex">
+
+                {/* SIDEBAR */}
+                <Sidebar
+                    user={user}
+                    active={active}
+                    onChange={setActive}
+                />
+
+                {/* MAIN CONTENT */}
+                <main className="flex-1 p-6 bg-gray-100 min-h-[calc(100vh-64px)]">
+                    {renderContent()}
+                </main>
+
             </div>
         </div>
     );

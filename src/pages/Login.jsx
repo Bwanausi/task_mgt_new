@@ -37,7 +37,7 @@ export default function Login() {
   };
 
   return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-topcolor to-gray-100 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-teal-50 px-4">
         <div className="w-full max-w-md">
           <form
               onSubmit={handleSubmit}
@@ -123,7 +123,7 @@ export default function Login() {
             <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-brand hover:bg-brand-80 text-white font-medium py-2.5 rounded-lg transition disabled:opacity-50"
+                className="w-full bg-teal-950 hover:bg-teal-800 text-white font-medium py-2.5 rounded-lg transition disabled:opacity-50"
             >
               {loading ? "Logging in..." : "Login"}
             </button>
