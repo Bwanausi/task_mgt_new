@@ -2,7 +2,6 @@ import { useState } from "react";
 import { FaEdit, FaTrash } from "react-icons/fa";
 
 export default function MyTasks() {
-    // sample data (replace with API data)
     const [tasks, setTasks] = useState([
         {
             id: 1,
@@ -85,10 +84,10 @@ export default function MyTasks() {
                                 <span className="text-red-500">{task.dueDate}</span>
                             </p>
 
-                            {/* PRIORITY BADGE */}
+                            {/* PRIORITY BADGE (rounded full with color) */}
                             <div className="flex items-center gap-2 mb-4">
                 <span
-                    className={`px-2 py-1 rounded text-white text-xs ${priorityColor[task.priority]}`}
+                    className={`px-3 py-1 rounded-full text-white text-xs font-medium ${priorityColor[task.priority]}`}
                 >
                   {task.priority}
                 </span>

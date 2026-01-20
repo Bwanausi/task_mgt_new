@@ -61,11 +61,11 @@ export default function AllTasks() {
     };
 
     const toggleComplete = (id) => {
-        setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+        setTasks(tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
     };
 
     const deleteTask = (id) => {
-        setTasks(tasks.filter(t => t.id !== id));
+        setTasks(tasks.filter((t) => t.id !== id));
     };
 
     return (
@@ -78,52 +78,58 @@ export default function AllTasks() {
 
                 {/* ADD TASK FORM */}
                 <form
-                    className="bg-white p-4 border border-gray-200 rounded mb-6 space-y-3"
+                    className="bg-white p-6 border border-gray-200 rounded-lg mb-6 shadow-sm space-y-3"
                     onSubmit={handleAddTask}
                 >
-                    <h3 className="font-semibold mb-2">Add New Task</h3>
-                    <input
-                        type="text"
-                        placeholder="Title"
-                        className="w-full p-2 border rounded"
-                        value={newTask.title}
-                        onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                    />
-                    <input
-                        type="text"
-                        placeholder="Description"
-                        className="w-full p-2 border rounded"
-                        value={newTask.description}
-                        onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                    />
-                    <input
-                        type="date"
-                        className="w-full p-2 border rounded"
-                        value={newTask.dueDate}
-                        onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
-                    />
-                    <input
-                        type="text"
-                        placeholder="Category"
-                        className="w-full p-2 border rounded"
-                        value={newTask.category}
-                        onChange={(e) => setNewTask({ ...newTask, category: e.target.value })}
-                    />
-                    <select
-                        className="w-full p-2 border rounded"
-                        value={newTask.priority}
-                        onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                    >
-                        <option value="Low">Low</option>
-                        <option value="Medium">Medium</option>
-                        <option value="High">High</option>
-                    </select>
-                    <button
-                        type="submit"
-                        className="bg-teal-700 text-white px-4 py-2 rounded hover:bg-teal-800"
-                    >
-                        Add Task
-                    </button>
+                    <h3 className="font-semibold mb-2 text-teal-800">Add New Task</h3>
+
+                    {/* TWO-COLUMN GRID */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input
+                            type="text"
+                            placeholder="Title"
+                            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400"
+                            value={newTask.title}
+                            onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Category"
+                            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400"
+                            value={newTask.category}
+                            onChange={(e) => setNewTask({ ...newTask, category: e.target.value })}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Description"
+                            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400"
+                            value={newTask.description}
+                            onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                        />
+                        <input
+                            type="date"
+                            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400"
+                            value={newTask.dueDate}
+                            onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+                        />
+                        <select
+                            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400"
+                            value={newTask.priority}
+                            onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                        >
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                        <div className="flex items-center justify-start md:justify-end">
+                            <button
+                                type="submit"
+                                className="bg-teal-700 text-white px-5 py-2 rounded-lg hover:bg-teal-800 transition w-full md:w-auto"
+                            >
+                                Add Task
+                            </button>
+                        </div>
+                    </div>
                 </form>
 
                 {/* TASK CARDS */}
@@ -131,7 +137,7 @@ export default function AllTasks() {
                     {filteredTasks.map((task) => (
                         <div
                             key={task.id}
-                            className={`bg-white border border-gray-200 rounded p-5 hover:shadow-md hover:bg-gray-50 transition`}
+                            className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md hover:bg-gray-50 transition"
                         >
                             <p className="text-sm mb-1">
                                 <span className="font-semibold">Title:</span> {task.title}
@@ -149,7 +155,7 @@ export default function AllTasks() {
                             {/* PRIORITY BADGE */}
                             <div className="flex items-center gap-2 mb-4">
                 <span
-                    className={`px-2 py-1 rounded text-white text-xs ${priorityColor[task.priority]}`}
+                    className={`px-3 py-1 rounded-full text-white text-xs font-semibold ${priorityColor[task.priority]}`}
                 >
                   {task.priority}
                 </span>
@@ -181,10 +187,10 @@ export default function AllTasks() {
             {/* RIGHT PANEL */}
             <div className="col-span-1">
                 {/* CATEGORY FILTER */}
-                <div className="p-4 border border-gray-200 rounded mb-6">
+                <div className="p-4 border border-gray-200 rounded-lg mb-6 shadow-sm">
                     <label className="block mb-2 font-semibold">Filter by Category</label>
                     <select
-                        className="w-full p-2 border rounded"
+                        className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400"
                         value={selectedCategory}
                         onChange={(e) => setSelectedCategory(e.target.value)}
                     >
@@ -198,7 +204,7 @@ export default function AllTasks() {
                 </div>
 
                 {/* COMPLETED TASKS */}
-                <div className="p-4 border border-gray-200 rounded">
+                <div className="p-4 border border-gray-200 rounded-lg shadow-sm">
                     <h3 className="font-semibold mb-2">Completed Tasks</h3>
                     <ul className="space-y-1">
                         {tasks

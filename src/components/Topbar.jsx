@@ -25,7 +25,7 @@ export default function Topbar({ user, onLogout }) {
 
                 {/* LEFT – LOGO */}
                 <h1 className="text-2xl font-bold tracking-wide">
-                    Task<span className="text-red-400">Minder</span>
+                    TFC<span className="text-red-400">TaskMinder</span>
                 </h1>
 
                 {/* CENTER – SEARCH */}
