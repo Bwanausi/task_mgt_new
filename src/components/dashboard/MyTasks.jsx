@@ -1,130 +1,60 @@
-import { useState } from "react";
-import { FaEdit, FaTrash } from "react-icons/fa";
+import { useState, useEffect } from "react";
+import { useAuth } from "../../auth/AuthContext"; // must be named import
+import api from "../../api/axios"; // your axios instance
 
-export default function MyTasks() {
-    // sample data (replace with API data)
-    const [tasks, setTasks] = useState([
-        {
-            id: 1,
-            title: "DSA",
-            description: "Solving 1 DSA question",
-            dueDate: "Nov 3, 2023, 5:30 AM",
-            priority: "Medium",
-            category: "Study",
-            completed: false,
-        },
-        {
-            id: 2,
-            title: "Walk",
-            description: "Go for a jogging",
-            dueDate: "Nov 3, 2023, 5:30 AM",
-            priority: "High",
-            category: "Health",
-            completed: true,
-        },
-    ]);
+export default function MyTask() {
+    const { user, token } = useAuth();
+    const [tasks, setTasks] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const [selectedCategory, setSelectedCategory] = useState("");
+    useEffect(() => {
+        if (!user) return; // not logged in
 
-    const priorityColor = {
-        Low: "bg-green-500",
-        Medium: "bg-yellow-500",
-        High: "bg-red-500",
-    };
+        const fetchMyTasks = async () => {
+            try {
+                const res = await api.get(`/task/mytask/${user.userId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                setTasks(res.data);
+            } catch (err) {
+                console.error("Failed to fetch tasks:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    // get unique categories for dropdown
-    const categories = [...new Set(tasks.map((t) => t.category))];
+        fetchMyTasks();
+    }, [user, token]);
 
-    // filter tasks by selected category
-    const filteredTasks = selectedCategory
-        ? tasks.filter((t) => t.category === selectedCategory)
-        : tasks;
+    if (loading) return <p>Loading tasks...</p>;
+    if (!tasks.length) return <p>No tasks assigned to you.</p>;
 
     return (
-        <div className="max-w-6xl mx-auto grid grid-cols-3 gap-6">
-            {/* MAIN TASK LIST */}
-            <div className="col-span-2">
-                <h2 className="text-center text-xl font-semibold text-teal-800 mb-6">
-                    My Task List
-                </h2>
-
-                <div className="space-y-6">
-                    {filteredTasks.map((task) => (
-                        <div
-                            key={task.id}
-                            className="bg-white border border-gray-200 rounded p-5 hover:shadow-md hover:bg-gray-50 transition"
-                        >
-                            <p className="text-sm mb-1">
-                                <span className="font-semibold">Title:</span> {task.title}
-                            </p>
-
-                            <p className="text-sm mb-1">
-                                <span className="font-semibold">Description:</span>{" "}
-                                {task.description}
-                            </p>
-
-                            <p className="text-sm mb-3">
-                                <span className="font-semibold">Due Date:</span>{" "}
-                                <span className="text-red-500">{task.dueDate}</span>
-                            </p>
-
-                            {/* PRIORITY BADGE */}
-                            <div className="flex items-center gap-2 mb-4">
-                <span
-                    className={`px-2 py-1 rounded text-white text-xs ${priorityColor[task.priority]}`}
+        <div className="max-w-4xl mx-auto p-4">
+            <h2 className="text-xl font-semibold mb-4">My Tasks</h2>
+            {tasks.map((task) => (
+                <div
+                    key={task.id} // unique key from backend
+                    className="bg-white border rounded p-4 mb-3 shadow-sm"
                 >
-                  {task.priority}
-                </span>
-                            </div>
-
-                            {/* ACTIONS */}
-                            <div className="flex gap-4 text-gray-500">
-                                <button className="hover:text-teal-700">
-                                    <FaEdit />
-                                </button>
-                                <button className="hover:text-red-600">
-                                    <FaTrash />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                    <p>
+                        <strong>Title:</strong> {task.title}
+                    </p>
+                    <p>
+                        <strong>Description:</strong> {task.description}
+                    </p>
+                    <p>
+                        <strong>Due:</strong> {new Date(task.dueDate).toLocaleString()}
+                    </p>
+                    <p>
+                        <strong>Priority:</strong> {task.priority}
+                    </p>
+                    <p>
+                        <strong>Categories:</strong>{" "}
+                        {task.categories.map((c) => c.name).join(", ")}
+                    </p>
                 </div>
-            </div>
-
-            {/* RIGHT-SIDE PANEL */}
-            <div className="col-span-1">
-                {/* CATEGORY FILTER */}
-                <div className="p-4 border border-gray-200 rounded mb-6">
-                    <label className="block mb-2 font-semibold">Filter by Category</label>
-                    <select
-                        className="w-full p-2 border rounded"
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                    >
-                        <option value="">All</option>
-                        {categories.map((cat) => (
-                            <option key={cat} value={cat}>
-                                {cat}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* COMPLETED TASKS */}
-                <div className="p-4 border border-gray-200 rounded">
-                    <h3 className="font-semibold mb-2">Completed Tasks</h3>
-                    <ul className="space-y-1">
-                        {tasks
-                            .filter((t) => t.completed)
-                            .map((task) => (
-                                <li key={task.id} className="flex items-center">
-                                    <input type="checkbox" checked readOnly className="mr-2" />
-                                    <span className="line-through text-gray-500">{task.title}</span>
-                                </li>
-                            ))}
-                    </ul>
-                </div>
-            </div>
+            ))}
         </div>
     );
 }

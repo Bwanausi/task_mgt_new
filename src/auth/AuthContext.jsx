@@ -1,16 +1,14 @@
-// src/auth/AuthContext.jsx
 import { createContext, useContext, useState } from "react";
 
+// Create context
 const AuthContext = createContext(null);
 
+// Provider component
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(
       JSON.parse(localStorage.getItem("user"))
   );
-
-  const [token, setToken] = useState(
-      localStorage.getItem("token")
-  );
+  const [token, setToken] = useState(localStorage.getItem("token"));
 
   const login = (data) => {
     localStorage.setItem("token", data.token);
@@ -35,4 +33,5 @@ export function AuthProvider({ children }) {
   );
 }
 
+// Named export for consuming context
 export const useAuth = () => useContext(AuthContext);
