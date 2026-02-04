@@ -107,7 +107,7 @@ export default function CreateTask({ onTaskAdded }) {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
+                    Authorization: `Bearer${token}`,
                 },
                 body: JSON.stringify(payload),
             });
@@ -129,9 +129,11 @@ export default function CreateTask({ onTaskAdded }) {
             });
             setUserSearch("");
             setShowUserDropdown(false);
+            alert("Failed to add task");
+
         } catch (err) {
             console.error(err);
-            alert("Failed to add task");
+            alert("Task Added Successfull");
         }
     };
 
