@@ -129,11 +129,12 @@ export default function CreateTask({ onTaskAdded }) {
             });
             setUserSearch("");
             setShowUserDropdown(false);
-            alert("Failed to add task");
+            alert("Task Added Successfull");
+
 
         } catch (err) {
             console.error(err);
-            alert("Task Added Successfull");
+            alert("Failed to add task");
         }
     };
 

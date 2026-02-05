@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { useAuth } from "../../auth/AuthContext";
+import api from "../../api/axios"; // use axios instance for PUT calls
 
 export default function AllTask() {
     const { token } = useAuth();
@@ -8,14 +9,24 @@ export default function AllTask() {
 
     const [tasks, setTasks] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState("");
+    const [selectedTask, setSelectedTask] = useState(null);
+    const [message, setMessage] = useState("");
 
-    const priorityColor = {
-        TODO: "bg-gray-500",
-        IN_PROGRESS: "bg-yellow-500",
-        DONE: "bg-green-500",
+    const statusColor = {
+        TODO: "bg-gray-400 text-gray-900",
+        IN_PROGRESS: "bg-yellow-200 text-yellow-800",
+        SUBMITTED: "bg-blue-200 text-blue-800",
+        DONE: "bg-green-200 text-green-800",
     };
 
-    /* ================= LOAD TASKS ================= */
+    const borderColor = {
+        TODO: "border-gray-400",
+        IN_PROGRESS: "border-yellow-400",
+        SUBMITTED: "border-blue-400",
+        DONE: "border-green-500",
+    };
+
+    // LOAD TASKS
     useEffect(() => {
         const fetchTasks = async () => {
             try {
@@ -32,79 +43,121 @@ export default function AllTask() {
         fetchTasks();
     }, [token]);
 
-    /* ================= CATEGORIES FOR FILTER ================= */
     const categories = Array.from(
         new Set(tasks.flatMap((t) => t.categories.map((c) => c.name)))
     );
 
-    /* ================= FILTERED TASKS ================= */
     const filteredTasks = selectedCategory
         ? tasks.filter((t) =>
             t.categories.some((c) => c.name === selectedCategory)
         )
         : tasks;
 
+    // APPROVE / REJECT HANDLERS
+    const handleApprove = async (taskId) => {
+        try {
+            await api.put(
+                `/task/approve/${taskId}`,
+                { message },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setTasks((prev) =>
+                prev.map((t) =>
+                    t.id === taskId ? { ...t, status: "DONE" } : t
+                )
+            );
+            setSelectedTask(null);
+            setMessage("");
+        } catch (err) {
+            console.error("Approve failed", err);
+        }
+    };
+
+    const handleReject = async (taskId) => {
+        try {
+            await api.put(
+                `/task/reject/${taskId}`,
+                { message },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setTasks((prev) =>
+                prev.map((t) =>
+                    t.id === taskId ? { ...t, status: "IN_PROGRESS" } : t
+                )
+            );
+            setSelectedTask(null);
+            setMessage("");
+        } catch (err) {
+            console.error("Reject failed", err);
+        }
+    };
+
     return (
         <div className="max-w-6xl mx-auto grid grid-cols-3 gap-6">
-            {/* MAIN TASK LIST */}
+            {/* TASK LIST */}
             <div className="col-span-2">
                 <h2 className="text-center text-xl font-semibold text-teal-800 mb-6">
                     All Task List
                 </h2>
 
-                <div className="space-y-6">
+                <div className="space-y-5">
                     {filteredTasks.map((task) => (
                         <div
                             key={task.id}
-                            className="bg-white border border-gray-200 rounded p-5 hover:shadow-md hover:bg-gray-50 transition"
+                            onClick={() => setSelectedTask(task)}
+                            className={`cursor-pointer bg-white border-l-4 ${
+                                borderColor[task.status] || "border-gray-300"
+                            } rounded-lg p-5 shadow-sm hover:shadow-md transition`}
                         >
-                            <p className="text-sm mb-1">
-                                <span className="font-semibold">Title:</span> {task.title}
-                            </p>
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="text-lg font-semibold text-gray-800">
+                                    {task.title}
+                                </h3>
+                                <span
+                                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                        statusColor[task.status] || "bg-gray-200 text-gray-700"
+                                    }`}
+                                >
+                  {task.status}
+                </span>
+                            </div>
 
-                            <p className="text-sm mb-1">
-                                <span className="font-semibold">Description:</span>{" "}
-                                {task.description}
+                            <p className="text-sm text-gray-600 mb-2">
+                                {task.description.length > 50
+                                    ? task.description.slice(0, 50) + "..."
+                                    : task.description}
                             </p>
 
                             <p className="text-sm mb-2">
-                                <span className="font-semibold">Due Date:</span>{" "}
+                                <span className="font-semibold">Due:</span>{" "}
                                 <span className="text-red-500">
                   {new Date(task.dueDate).toLocaleString()}
                 </span>
                             </p>
 
-                            {/* PRIORITY BADGE */}
-                            <div className="flex items-center gap-2 mb-2">
-                <span
-                    className={`px-3 py-1 rounded-full text-white text-xs font-medium ${
-                        priorityColor[task.priority] || "bg-gray-500"
-                    }`}
-                >
-                  {task.priority}
-                </span>
-                            </div>
+                            {task.assignedTo && (
+                                <p className="text-sm mb-2">
+                                    <span className="font-semibold">Assigned To:</span>{" "}
+                                    <span className="text-teal-700">{task.assignedTo.username}</span>
+                                </p>
+                            )}
 
-                            {/* CATEGORIES */}
+                            {task.createdBy && (
+                                <p className="text-sm mb-2">
+                                    <span className="font-semibold">Created By:</span>{" "}
+                                    <span className="text-purple-700">{task.createdBy.username}</span>
+                                </p>
+                            )}
+
                             <div className="flex flex-wrap gap-2 mb-3">
                                 {task.categories.map((cat) => (
                                     <span
-                                        key={cat.id} // ✅ unique key
-                                        className="px-2 py-1 bg-gray-200 rounded text-sm"
+                                        key={cat.id}
+                                        className="px-2 py-1 bg-gray-100 rounded-full text-xs"
                                     >
                     {cat.name}
                   </span>
                                 ))}
-                            </div>
-
-                            {/* ACTIONS */}
-                            <div className="flex gap-4 text-gray-500">
-                                <button className="hover:text-teal-700">
-                                    <FaEdit />
-                                </button>
-                                <button className="hover:text-red-600">
-                                    <FaTrash />
-                                </button>
                             </div>
                         </div>
                     ))}
@@ -113,8 +166,7 @@ export default function AllTask() {
 
             {/* RIGHT PANEL */}
             <div className="col-span-1">
-                {/* CATEGORY FILTER */}
-                <div className="p-4 border border-gray-200 rounded mb-6">
+                <div className="p-4 border border-gray-200 rounded-lg mb-6 bg-white shadow-sm">
                     <label className="block mb-2 font-semibold">Filter by Category</label>
                     <select
                         className="w-full p-2 border rounded"
@@ -129,22 +181,79 @@ export default function AllTask() {
                         ))}
                     </select>
                 </div>
-
-                {/* COMPLETED TASKS */}
-                <div className="p-4 border border-gray-200 rounded">
-                    <h3 className="font-semibold mb-2">Completed Tasks</h3>
-                    <ul className="space-y-1">
-                        {tasks
-                            .filter((t) => t.status === "DONE")
-                            .map((task) => (
-                                <li key={task.id} className="flex items-center">
-                                    <input type="checkbox" checked readOnly className="mr-2" />
-                                    <span className="line-through text-gray-500">{task.title}</span>
-                                </li>
-                            ))}
-                    </ul>
-                </div>
             </div>
+
+            {/* POPUP MODAL */}
+            {selectedTask && (
+                <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+                    <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 flex justify-between items-center">
+                            <h3 className="text-lg font-bold">{selectedTask.title}</h3>
+                            <button
+                                onClick={() => {
+                                    setSelectedTask(null);
+                                    setMessage("");
+                                }}
+                                className="text-white hover:text-red-300 text-xl"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="p-4 space-y-3 text-gray-700">
+                            <p>
+                                <strong>Description:</strong><br />
+                                {selectedTask.description}
+                            </p>
+                            <p>
+                                <strong>Due:</strong>{" "}
+                                {new Date(selectedTask.dueDate).toLocaleString()}
+                            </p>
+                            {selectedTask.assignedTo && (
+                                <p>
+                                    <strong>Assigned To:</strong> {selectedTask.assignedTo.username}
+                                </p>
+                            )}
+                            {selectedTask.createdBy && (
+                                <p>
+                                    <strong>Created By:</strong> {selectedTask.createdBy.username}
+                                </p>
+                            )}
+                            <p>
+                                <strong>Categories:</strong>{" "}
+                                {selectedTask.categories.map((c) => c.name).join(", ")}
+                            </p>
+                        </div>
+
+                        {/* FOOTER ACTIONS */}
+                        {selectedTask.status === "SUBMITTED" && (
+                            <div className="bg-gray-50 p-4 flex flex-col gap-2">
+                <textarea
+                    rows="3"
+                    placeholder="Submission message..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    className="w-full border rounded p-2"
+                />
+                                <div className="flex justify-end gap-2">
+                                    <button
+                                        onClick={() => handleApprove(selectedTask.id)}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                                    >
+                                        Approve
+                                    </button>
+                                    <button
+                                        onClick={() => handleReject(selectedTask.id)}
+                                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+                                    >
+                                        Reject
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
