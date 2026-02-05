@@ -10,7 +10,7 @@ export default function MyTask() {
     const [selectedTask, setSelectedTask] = useState(null);
     const [submitMessage, setSubmitMessage] = useState("");
 
-    // FETCH MY TASKS
+    // ================= FETCH MY TASKS =================
     useEffect(() => {
         if (!user) return;
 
@@ -30,7 +30,7 @@ export default function MyTask() {
         fetchMyTasks();
     }, [user, token]);
 
-    // ACCEPT TASK -> IN_PROGRESS
+    // ================= ACCEPT TASK =================
     const handleAccept = async (taskId) => {
         try {
             await api.put(`/task/accept/${taskId}`, {}, {
@@ -49,7 +49,7 @@ export default function MyTask() {
         }
     };
 
-    // SUBMIT TASK -> SINGLE API: create comment + update status
+    // ================= SUBMIT TASK =================
     const handleSubmit = async (task) => {
         if (!submitMessage.trim()) {
             alert("Please enter a message before submitting.");
@@ -60,15 +60,14 @@ export default function MyTask() {
             const payload = {
                 comment: submitMessage,
                 commentById: user.userId,
-                role: "NORMAL_USER" // ✅ updated to match backend enum
+                role: "NORMAL_USER",
+                status: task.status   // ✅ current status sent
             };
 
-            // Single API call to submit task
             await api.post(`/task/submit/${task.id}`, payload, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
-            // Update local state
             setTasks(prev =>
                 prev.map(t =>
                     t.id === task.id ? { ...t, status: "SUBMITTED" } : t
@@ -83,6 +82,7 @@ export default function MyTask() {
         }
     };
 
+    // ================= UI =================
     if (loading) return <p className="text-center mt-4">Loading tasks...</p>;
     if (!tasks.length) return <p className="text-center mt-4">No tasks assigned to you.</p>;
 
@@ -90,7 +90,7 @@ export default function MyTask() {
         <div className="max-w-4xl mx-auto p-4">
             <h2 className="text-2xl font-bold mb-4 text-blue-700">My Tasks</h2>
 
-            {/* TASK CARDS */}
+            {/* TASK LIST */}
             {tasks.map(task => (
                 <div
                     key={task.id}

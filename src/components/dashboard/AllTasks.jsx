@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { FaEdit, FaTrash } from "react-icons/fa";
 import { useAuth } from "../../auth/AuthContext";
-import api from "../../api/axios"; // use axios instance for PUT calls
+import api from "../../api/axios";
 
 export default function AllTask() {
-    const { token } = useAuth();
+    const { user, token } = useAuth();
     const API_TASKS = "http://localhost:8181/api/v1/task/getall";
 
     const [tasks, setTasks] = useState([]);
@@ -16,24 +15,24 @@ export default function AllTask() {
         TODO: "bg-gray-400 text-gray-900",
         IN_PROGRESS: "bg-yellow-200 text-yellow-800",
         SUBMITTED: "bg-blue-200 text-blue-800",
-        DONE: "bg-green-200 text-green-800",
+        APPROVED: "bg-green-200 text-green-800",
+        REJECTED: "bg-red-200 text-red-800",
     };
 
     const borderColor = {
         TODO: "border-gray-400",
         IN_PROGRESS: "border-yellow-400",
         SUBMITTED: "border-blue-400",
-        DONE: "border-green-500",
+        APPROVED: "border-green-500",
+        REJECTED: "border-red-500",
     };
 
-    // LOAD TASKS
     useEffect(() => {
         const fetchTasks = async () => {
             try {
                 const res = await fetch(API_TASKS, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                if (!res.ok) throw new Error("Failed to load tasks");
                 const data = await res.json();
                 setTasks(data);
             } catch (err) {
@@ -53,42 +52,30 @@ export default function AllTask() {
         )
         : tasks;
 
-    // APPROVE / REJECT HANDLERS
-    const handleApprove = async (taskId) => {
+    // ONE API FOR APPROVE / REJECT
+    const sendDecision = async (taskId, statusValue) => {
         try {
-            await api.put(
-                `/task/approve/${taskId}`,
-                { message },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            setTasks((prev) =>
-                prev.map((t) =>
-                    t.id === taskId ? { ...t, status: "DONE" } : t
-                )
-            );
-            setSelectedTask(null);
-            setMessage("");
-        } catch (err) {
-            console.error("Approve failed", err);
-        }
-    };
+            const payload = {
+                comment: message,
+                commentById: user.userId,
+                role: "NORMAL_USER",
+                status: statusValue,
+            };
 
-    const handleReject = async (taskId) => {
-        try {
-            await api.put(
-                `/task/reject/${taskId}`,
-                { message },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            await api.post(`/task/submit/${taskId}`, payload, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
             setTasks((prev) =>
                 prev.map((t) =>
-                    t.id === taskId ? { ...t, status: "IN_PROGRESS" } : t
+                    t.id === taskId ? { ...t, status: statusValue } : t
                 )
             );
+
             setSelectedTask(null);
             setMessage("");
         } catch (err) {
-            console.error("Reject failed", err);
+            console.error("Action failed", err);
         }
     };
 
@@ -118,8 +105,8 @@ export default function AllTask() {
                                         statusColor[task.status] || "bg-gray-200 text-gray-700"
                                     }`}
                                 >
-                  {task.status}
-                </span>
+                                    {task.status}
+                                </span>
                             </div>
 
                             <p className="text-sm text-gray-600 mb-2">
@@ -131,23 +118,19 @@ export default function AllTask() {
                             <p className="text-sm mb-2">
                                 <span className="font-semibold">Due:</span>{" "}
                                 <span className="text-red-500">
-                  {new Date(task.dueDate).toLocaleString()}
-                </span>
+                                    {new Date(task.dueDate).toLocaleString()}
+                                </span>
                             </p>
 
-                            {task.assignedTo && (
-                                <p className="text-sm mb-2">
-                                    <span className="font-semibold">Assigned To:</span>{" "}
-                                    <span className="text-teal-700">{task.assignedTo.username}</span>
-                                </p>
-                            )}
+                            <p className="text-sm mb-2">
+                                <span className="font-semibold">Assigned To:</span>{" "}
+                                {task.assignedTo?.username}
+                            </p>
 
-                            {task.createdBy && (
-                                <p className="text-sm mb-2">
-                                    <span className="font-semibold">Created By:</span>{" "}
-                                    <span className="text-purple-700">{task.createdBy.username}</span>
-                                </p>
-                            )}
+                            <p className="text-sm mb-2">
+                                <span className="font-semibold">Created By:</span>{" "}
+                                {task.createdBy?.username}
+                            </p>
 
                             <div className="flex flex-wrap gap-2 mb-3">
                                 {task.categories.map((cat) => (
@@ -155,8 +138,8 @@ export default function AllTask() {
                                         key={cat.id}
                                         className="px-2 py-1 bg-gray-100 rounded-full text-xs"
                                     >
-                    {cat.name}
-                  </span>
+                                        {cat.name}
+                                    </span>
                                 ))}
                             </div>
                         </div>
@@ -164,7 +147,7 @@ export default function AllTask() {
                 </div>
             </div>
 
-            {/* RIGHT PANEL */}
+            {/* FILTER */}
             <div className="col-span-1">
                 <div className="p-4 border border-gray-200 rounded-lg mb-6 bg-white shadow-sm">
                     <label className="block mb-2 font-semibold">Filter by Category</label>
@@ -183,17 +166,14 @@ export default function AllTask() {
                 </div>
             </div>
 
-            {/* POPUP MODAL */}
+            {/* MODAL */}
             {selectedTask && (
                 <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
                     <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
                         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 flex justify-between items-center">
                             <h3 className="text-lg font-bold">{selectedTask.title}</h3>
                             <button
-                                onClick={() => {
-                                    setSelectedTask(null);
-                                    setMessage("");
-                                }}
+                                onClick={() => { setSelectedTask(null); setMessage(""); }}
                                 className="text-white hover:text-red-300 text-xl"
                             >
                                 ✕
@@ -201,49 +181,31 @@ export default function AllTask() {
                         </div>
 
                         <div className="p-4 space-y-3 text-gray-700">
-                            <p>
-                                <strong>Description:</strong><br />
-                                {selectedTask.description}
-                            </p>
-                            <p>
-                                <strong>Due:</strong>{" "}
-                                {new Date(selectedTask.dueDate).toLocaleString()}
-                            </p>
-                            {selectedTask.assignedTo && (
-                                <p>
-                                    <strong>Assigned To:</strong> {selectedTask.assignedTo.username}
-                                </p>
-                            )}
-                            {selectedTask.createdBy && (
-                                <p>
-                                    <strong>Created By:</strong> {selectedTask.createdBy.username}
-                                </p>
-                            )}
-                            <p>
-                                <strong>Categories:</strong>{" "}
-                                {selectedTask.categories.map((c) => c.name).join(", ")}
-                            </p>
+                            <p><strong>Description:</strong><br />{selectedTask.description}</p>
+                            <p><strong>Due:</strong> {new Date(selectedTask.dueDate).toLocaleString()}</p>
+                            <p><strong>Assigned To:</strong> {selectedTask.assignedTo?.username}</p>
+                            <p><strong>Created By:</strong> {selectedTask.createdBy?.username}</p>
+                            <p><strong>Categories:</strong> {selectedTask.categories.map(c => c.name).join(", ")}</p>
                         </div>
 
-                        {/* FOOTER ACTIONS */}
                         {selectedTask.status === "SUBMITTED" && (
                             <div className="bg-gray-50 p-4 flex flex-col gap-2">
-                <textarea
-                    rows="3"
-                    placeholder="Submission message..."
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="w-full border rounded p-2"
-                />
+                                <textarea
+                                    rows="3"
+                                    placeholder="Enter message..."
+                                    value={message}
+                                    onChange={(e) => setMessage(e.target.value)}
+                                    className="w-full border rounded p-2"
+                                />
                                 <div className="flex justify-end gap-2">
                                     <button
-                                        onClick={() => handleApprove(selectedTask.id)}
+                                        onClick={() => sendDecision(selectedTask.id, "APPROVED")}
                                         className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
                                     >
                                         Approve
                                     </button>
                                     <button
-                                        onClick={() => handleReject(selectedTask.id)}
+                                        onClick={() => sendDecision(selectedTask.id, "REJECTED")}
                                         className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
                                     >
                                         Reject
