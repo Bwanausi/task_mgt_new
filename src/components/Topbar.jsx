@@ -5,16 +5,17 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../auth/AuthContext";
 
 export default function Topbar({ user, onLogout }) {
-    const { token } = useAuth(); // Use Auth context token
-    const [open, setOpen] = useState(false); // Profile menu
-    const [notifOpen, setNotifOpen] = useState(false); // Notification popup
+    const { token } = useAuth();
+
+    const [open, setOpen] = useState(false);
+    const [notifOpen, setNotifOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
-    const [loadingIds, setLoadingIds] = useState([]); // Track notifications being marked as read
+    const [loadingIds, setLoadingIds] = useState([]);
 
     const menuRef = useRef(null);
     const notifRef = useRef(null);
 
-    // Close dropdowns when clicking outside
+    // Close dropdowns on outside click
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false);
@@ -53,12 +54,9 @@ export default function Topbar({ user, onLogout }) {
 
     const unreadCount = notifications.filter((n) => !n.read).length;
 
-    // Handle notification click → mark as read
+    // Mark notification as read (PUT)
     const handleNotificationClick = async (notifId) => {
-        if (!token) {
-            console.error("User not authenticated");
-            return;
-        }
+        if (!token) return;
 
         if (loadingIds.includes(notifId)) return;
         setLoadingIds((prev) => [...prev, notifId]);
@@ -67,7 +65,7 @@ export default function Topbar({ user, onLogout }) {
             const res = await fetch(
                 `http://localhost:8181/api/v1/notifications/read/${notifId}`,
                 {
-                    method: "POST",
+                    method: "PUT",   // ✅ FIXED
                     headers: {
                         Authorization: `Bearer ${token}`,
                         "Content-Type": "application/json",
@@ -77,12 +75,15 @@ export default function Topbar({ user, onLogout }) {
 
             if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
+            // Update UI
             setNotifications((prev) =>
-                prev.map((n) => (n.id === notifId ? { ...n, read: true } : n))
+                prev.map((n) =>
+                    n.id === notifId ? { ...n, read: true } : n
+                )
             );
         } catch (err) {
             console.error("Mark as read error:", err);
-            alert("Failed to mark notification as read. Please try again.");
+            alert("Failed to mark notification as read");
         } finally {
             setLoadingIds((prev) => prev.filter((id) => id !== notifId));
         }
@@ -109,14 +110,14 @@ export default function Topbar({ user, onLogout }) {
                     </button>
                 </div>
 
-                {/* RIGHT SIDE */}
+                {/* RIGHT */}
                 <div className="flex items-center gap-4">
 
                     {/* NOTIFICATIONS */}
                     <div className="relative" ref={notifRef}>
                         <button
                             onClick={() => setNotifOpen(!notifOpen)}
-                            className="relative p-2 text-gray-600 hover:text-[#00A662] transition"
+                            className="relative p-2 text-gray-600 hover:text-[#00A662]"
                         >
                             <FaBell size={18} />
                             {unreadCount > 0 && (
@@ -127,48 +128,40 @@ export default function Topbar({ user, onLogout }) {
                         </button>
 
                         {notifOpen && (
-                            <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+                            <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-50">
 
-                                {/* Header */}
-                                <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-                                    <span className="font-semibold text-slate-700">Notifications</span>
+                                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex justify-between">
+                                    <span className="font-semibold">Notifications</span>
                                     <span className="text-xs text-gray-400">{unreadCount} new</span>
                                 </div>
 
-                                {/* Body */}
                                 <div className="max-h-96 overflow-y-auto">
                                     {notifications.length === 0 ? (
-                                        <p className="p-4 text-sm text-gray-500 text-center">No new notifications</p>
+                                        <p className="p-4 text-sm text-gray-500 text-center">
+                                            No new notifications
+                                        </p>
                                     ) : (
                                         notifications.map((n) => (
                                             <div
                                                 key={n.id}
-                                                className={`px-4 py-3 flex gap-3 border-b border-gray-200 last:border-b-0 cursor-pointer transition
-                                                ${!n.read ? "bg-emerald-50 hover:bg-emerald-100" : "hover:bg-gray-50"}`}
                                                 onClick={() => handleNotificationClick(n.id)}
+                                                className={`px-4 py-3 flex gap-3 border-b border-gray-200 cursor-pointer
+                                                ${!n.read ? "bg-emerald-50 hover:bg-emerald-100" : "hover:bg-gray-50"}`}
                                             >
                                                 {!n.read && (
-                                                    <span className="mt-2 h-2 w-2 bg-emerald-500 rounded-full flex-shrink-0"></span>
+                                                    <span className="mt-2 h-2 w-2 bg-emerald-500 rounded-full"></span>
                                                 )}
                                                 <div className="flex-1">
-                                                    <p className="text-sm text-slate-800 leading-snug">{n.message}</p>
+                                                    <p className="text-sm">{n.message}</p>
                                                     <span className="text-xs text-gray-400">
                                                         {new Date(n.createdAt).toLocaleString()}
                                                     </span>
                                                 </div>
-                                                {loadingIds.includes(n.id) && <span className="text-xs text-gray-400">⏳</span>}
+                                                {loadingIds.includes(n.id) && <span>⏳</span>}
                                             </div>
                                         ))
                                     )}
                                 </div>
-
-                                {/* Footer */}
-                                <div className="px-4 py-2 text-center bg-gray-50 border-t border-gray-200">
-                                    <button className="text-sm text-[#00A662] hover:underline">
-                                        View all notifications
-                                    </button>
-                                </div>
-
                             </div>
                         )}
                     </div>
@@ -177,8 +170,8 @@ export default function Topbar({ user, onLogout }) {
                     {user && (
                         <div className="relative flex items-center gap-3" ref={menuRef}>
                             <div className="text-right hidden sm:block">
-                                <p className="text-sm font-semibold text-slate-800">{user.username}</p>
-                                <p className="text-xs text-slate-500">{user.role}</p>
+                                <p className="text-sm font-semibold">{user.username}</p>
+                                <p className="text-xs text-gray-500">{user.role}</p>
                             </div>
 
                             <img
@@ -189,20 +182,16 @@ export default function Topbar({ user, onLogout }) {
                             />
 
                             {open && (
-                                <div className="absolute right-0 top-12 w-48 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
-                                    <button className="w-full px-4 py-3 flex items-center gap-2 hover:bg-gray-100 text-sm">
+                                <div className="absolute right-0 top-12 w-48 bg-white border rounded shadow">
+                                    <button className="w-full px-4 py-3 hover:bg-gray-100 text-sm">
                                         <FaUserCircle /> Profile
                                     </button>
-
-                                    <button className="w-full px-4 py-3 flex items-center gap-2 hover:bg-gray-100 text-sm">
+                                    <button className="w-full px-4 py-3 hover:bg-gray-100 text-sm">
                                         <FaCog /> Settings
                                     </button>
-
-                                    <div className="border-t border-gray-200" />
-
                                     <button
                                         onClick={onLogout}
-                                        className="w-full px-4 py-3 flex items-center gap-2 text-red-600 hover:bg-red-50 text-sm font-medium"
+                                        className="w-full px-4 py-3 text-red-600 hover:bg-red-50 text-sm"
                                     >
                                         <FaSignOutAlt /> Logout
                                     </button>
