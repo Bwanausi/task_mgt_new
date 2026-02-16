@@ -7,11 +7,12 @@ import {
     FaChartBar,
     FaCog,
     FaPlus,
+    FaClipboardList,
 } from "react-icons/fa";
 
 const ICONS_MAP = {
     dashboard: <FaTachometerAlt />,
-    myTasks: <FaTasks />,
+    myTasks: <FaClipboardList />, // different icon from All Tasks
     allTasks: <FaTasks />,
     createTask: <FaPlus />,
     users: <FaUsers />,
@@ -20,13 +21,24 @@ const ICONS_MAP = {
 };
 
 export default function Sidebar({ user, active, onChange }) {
+
+    // ✅ permissions already flat
+    const userPermissions = user?.permissions || [];
+
     const hasPermission = (required = []) =>
         required.length === 0 ||
-        required.some((p) => user?.permissions?.includes(p));
+        required.some(p => userPermissions.includes(p));
 
-    const filteredItems = SIDEBAR_ITEMS.filter((item) =>
-        hasPermission(item.permissions)
-    );
+    // ✅ CEO detection (your structure)
+    const isCEO = user?.roles?.includes("CEO");
+
+    const filteredItems = SIDEBAR_ITEMS
+        .filter(item => hasPermission(item.permissions))
+        .filter(item => {
+            // ❌ Hide My Tasks for CEO
+            if (isCEO && item.key === "myTasks") return false;
+            return true;
+        });
 
     return (
         <aside className="w-64 bg-[#F8FAFC] border-r border-gray-200 min-h-[calc(100vh-64px)] flex flex-col">
@@ -38,7 +50,7 @@ export default function Sidebar({ user, active, onChange }) {
 
             {/* MENU */}
             <nav className="flex-1 px-3 space-y-1">
-                {filteredItems.map((item) => {
+                {filteredItems.map(item => {
                     const isActive = active === item.key;
 
                     return (
@@ -69,11 +81,9 @@ export default function Sidebar({ user, active, onChange }) {
                 })}
             </nav>
 
-            {/* FOOTER USER (Optional Premium Touch) */}
+            {/* FOOTER */}
             <div className="p-4 border-t border-gray-200">
-                <div className="text-xs text-slate-500">
-                    Logged in as
-                </div>
+                <div className="text-xs text-slate-500">Logged in as</div>
                 <div className="text-sm font-medium text-slate-800">
                     {user?.username}
                 </div>

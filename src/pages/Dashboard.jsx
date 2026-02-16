@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
@@ -13,20 +13,52 @@ import Reports from "../components/dashboard/Reports";
 import Settings from "../components/dashboard/Settings";
 
 export default function Dashboard() {
-    const { user, logout } = useAuth();
+    const { user, logout, token } = useAuth();
     const navigate = useNavigate();
     const [active, setActive] = useState("dashboard");
+
+    // Dynamic stats
+    const [stats, setStats] = useState({
+        totalTasks: 0,
+        completedTasks: 0,
+        pendingTasks: 0,
+        totalUsers: 0,
+    });
+    const [loading, setLoading] = useState(true);
 
     const handleLogout = () => {
         logout();
         navigate("/login");
     };
 
-    // Demo Data
-    const totalTasks = 12;
-    const completedTasks = 5;
-    const pendingTasks = totalTasks - completedTasks;
-    const totalUsers = 8;
+    // Fetch dashboard stats for this user
+    useEffect(() => {
+        const fetchDashboard = async () => {
+            try {
+                const res = await fetch(`http://localhost:8181/api/v1/dashboard`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error("Failed to fetch dashboard stats");
+                const data = await res.json();
+
+                // Example response structure from backend
+                // {
+                //   totalTasks: 12,
+                //   completedTasks: 5,
+                //   pendingTasks: 7,
+                //   totalUsers: 8
+                // }
+
+                setStats(data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (user) fetchDashboard();
+    }, [user, token]);
 
     const renderContent = () => {
         switch (active) {
@@ -35,7 +67,7 @@ export default function Dashboard() {
             case "allTasks":
                 return <AllTasks />;
             case "createTask":
-                return <CreateTask />;
+                return <CreateTask onTaskAdded={() => setActive("allTasks")} />;
             case "users":
                 return <Users />;
             case "reports":
@@ -43,7 +75,9 @@ export default function Dashboard() {
             case "settings":
                 return <Settings />;
             default:
-                return (
+                return loading ? (
+                    <p>Loading dashboard...</p>
+                ) : (
                     <div className="space-y-6">
 
                         {/* Welcome Section */}
@@ -63,10 +97,10 @@ export default function Dashboard() {
 
                         {/* KPI Section */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-                            <StatCard title="Total Tasks" value={totalTasks} />
-                            <StatCard title="Completed Tasks" value={completedTasks} />
-                            <StatCard title="Pending Tasks" value={pendingTasks} />
-                            <StatCard title="Total Users" value={totalUsers} />
+                            <StatCard title="Total Tasks" value={stats.totalTasks} />
+                            <StatCard title="Completed Tasks" value={stats.completedTasks} />
+                            <StatCard title="Pending Tasks" value={stats.pendingTasks} />
+                            <StatCard title="Total Users" value={stats.totalUsers} />
                         </div>
 
                     </div>
@@ -100,15 +134,9 @@ export default function Dashboard() {
 }
 
 /* ---------- Office Style Stat Card ---------- */
-
 const StatCard = ({ title, value }) => (
     <div className="bg-white border border-gray-300 shadow-sm p-5">
-        <p className="text-sm font-medium text-gray-600">
-            {title}
-        </p>
-
-        <p className="text-2xl font-semibold text-gray-800 mt-3">
-            {value}
-        </p>
+        <p className="text-sm font-medium text-gray-600">{title}</p>
+        <p className="text-2xl font-semibold text-gray-800 mt-3">{value}</p>
     </div>
 );

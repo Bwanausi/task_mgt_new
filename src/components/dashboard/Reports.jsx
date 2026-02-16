@@ -37,22 +37,26 @@ export default function Reports() {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Page Header */}
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold">Reports</h1>
-                <span className="text-sm text-gray-500">
-          Overview of system task statistics
-        </span>
+        <div className="space-y-8">
+
+            {/* HEADER */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-800">Reports</h1>
+                    <p className="text-sm text-gray-500">
+                        Overview of system task statistics
+                    </p>
+                </div>
             </div>
 
-            {/* Report Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {/* REPORT CARDS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <ReportCard
                     title="Total Tasks"
                     value={report.totalTasks}
                     valueColor="text-blue-600"
                     icon={ClipboardList}
+                    bg="from-blue-50 to-blue-100"
                 />
 
                 <ReportCard
@@ -60,6 +64,7 @@ export default function Reports() {
                     value={report.completedTasks}
                     valueColor="text-green-600"
                     icon={CheckCircle}
+                    bg="from-green-50 to-green-100"
                 />
 
                 <ReportCard
@@ -67,6 +72,7 @@ export default function Reports() {
                     value={report.pendingTasks}
                     valueColor="text-yellow-600"
                     icon={Clock}
+                    bg="from-yellow-50 to-yellow-100"
                 />
 
                 <ReportCard
@@ -74,6 +80,7 @@ export default function Reports() {
                     value={report.overdueTasks}
                     valueColor="text-red-600"
                     icon={AlertTriangle}
+                    bg="from-red-50 to-red-100"
                 />
             </div>
         </div>
@@ -82,25 +89,32 @@ export default function Reports() {
 
 /* ---------------- COMPONENTS ---------------- */
 
-const ReportCard = ({ title, value, valueColor, icon: Icon }) => (
-    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex items-center gap-4">
-        <div className="p-3 rounded-lg bg-gray-100">
-            <Icon className="text-gray-700" size={24} />
+const ReportCard = ({ title, value, valueColor, icon: Icon, bg }) => (
+    <div className="relative bg-gradient-to-br bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200">
+
+        {/* ICON */}
+        <div className={`absolute top-4 right-4 p-3 rounded-xl bg-gradient-to-br ${bg}`}>
+            <Icon className="text-slate-700" size={22} />
         </div>
 
-        <div>
-            <p className="text-sm text-gray-500">{title}</p>
-            <p className={`text-3xl font-bold ${valueColor}`}>{value}</p>
-        </div>
+        {/* CONTENT */}
+        <p className="text-sm text-gray-500">{title}</p>
+        <p className={`mt-2 text-3xl font-bold ${valueColor}`}>{value}</p>
     </div>
 );
 
 const Loading = () => (
-    <p className="text-gray-500">Loading reports...</p>
+    <div className="flex justify-center items-center py-20">
+    <span className="text-gray-400 animate-pulse">
+      Loading reports...
+    </span>
+    </div>
 );
 
 const NoAccess = () => (
-    <p className="text-red-500 font-semibold">
-        Access Denied – You don’t have permission to view reports
-    </p>
+    <div className="flex justify-center items-center py-20">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-6 py-3 rounded-xl shadow-sm">
+            Access Denied – You don’t have permission to view reports
+        </div>
+    </div>
 );

@@ -25,7 +25,7 @@ export default function Topbar({ user, onLogout }) {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Fetch unread notifications
+    // Fetch notifications
     useEffect(() => {
         if (!user?.userId || !token) return;
 
@@ -41,7 +41,7 @@ export default function Topbar({ user, onLogout }) {
                     }
                 );
 
-                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                if (!res.ok) throw new Error("Fetch failed");
                 const data = await res.json();
                 setNotifications(data);
             } catch (err) {
@@ -54,18 +54,24 @@ export default function Topbar({ user, onLogout }) {
 
     const unreadCount = notifications.filter((n) => !n.read).length;
 
-    // Mark notification as read (PUT)
+    // 🔥 FIXED HANDLER
     const handleNotificationClick = async (notifId) => {
-        if (!token) return;
+        console.log("Clicked notification:", notifId); // 👈 DEBUG
+
+        if (!token) {
+            console.error("No token found");
+            return;
+        }
 
         if (loadingIds.includes(notifId)) return;
+
         setLoadingIds((prev) => [...prev, notifId]);
 
         try {
             const res = await fetch(
                 `http://localhost:8181/api/v1/notifications/read/${notifId}`,
                 {
-                    method: "PUT",   // ✅ FIXED
+                    method: "PUT",
                     headers: {
                         Authorization: `Bearer ${token}`,
                         "Content-Type": "application/json",
@@ -73,7 +79,9 @@ export default function Topbar({ user, onLogout }) {
                 }
             );
 
-            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            console.log("Backend response:", res.status); // 👈 DEBUG
+
+            if (!res.ok) throw new Error("Mark as read failed");
 
             // Update UI
             setNotifications((prev) =>
@@ -83,7 +91,6 @@ export default function Topbar({ user, onLogout }) {
             );
         } catch (err) {
             console.error("Mark as read error:", err);
-            alert("Failed to mark notification as read");
         } finally {
             setLoadingIds((prev) => prev.filter((id) => id !== notifId));
         }
@@ -95,7 +102,7 @@ export default function Topbar({ user, onLogout }) {
 
                 {/* LOGO */}
                 <div className="flex items-center h-12">
-                    <img src={logo} alt="TFC Logo" className="h-10 w-auto object-contain -ml-1" />
+                    <img src={logo} alt="TFC Logo" className="h-10 w-auto object-contain" />
                 </div>
 
                 {/* SEARCH */}
@@ -105,7 +112,7 @@ export default function Topbar({ user, onLogout }) {
                         placeholder="Search tasks..."
                         className="w-full px-4 py-2 bg-transparent text-slate-700 focus:outline-none"
                     />
-                    <button className="px-4 text-slate-500 hover:text-[#00A662] transition-colors">
+                    <button className="px-4 text-slate-500 hover:text-[#00A662]">
                         <FaSearch />
                     </button>
                 </div>
@@ -122,20 +129,20 @@ export default function Topbar({ user, onLogout }) {
                             <FaBell size={18} />
                             {unreadCount > 0 && (
                                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 rounded-full">
-                                    {unreadCount}
-                                </span>
+                  {unreadCount}
+                </span>
                             )}
                         </button>
 
                         {notifOpen && (
-                            <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-50">
+                            <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg border border-gray-200 z-50 flex flex-col">
 
                                 <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex justify-between">
                                     <span className="font-semibold">Notifications</span>
                                     <span className="text-xs text-gray-400">{unreadCount} new</span>
                                 </div>
 
-                                <div className="max-h-96 overflow-y-auto">
+                                <div className="flex-1 max-h-96 overflow-y-auto">
                                     {notifications.length === 0 ? (
                                         <p className="p-4 text-sm text-gray-500 text-center">
                                             No new notifications
@@ -144,9 +151,12 @@ export default function Topbar({ user, onLogout }) {
                                         notifications.map((n) => (
                                             <div
                                                 key={n.id}
-                                                onClick={() => handleNotificationClick(n.id)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // 🔥 prevent dropdown close
+                                                    handleNotificationClick(n.id);
+                                                }}
                                                 className={`px-4 py-3 flex gap-3 border-b border-gray-200 cursor-pointer
-                                                ${!n.read ? "bg-emerald-50 hover:bg-emerald-100" : "hover:bg-gray-50"}`}
+                        ${!n.read ? "bg-emerald-50 hover:bg-emerald-100" : "hover:bg-gray-50"}`}
                                             >
                                                 {!n.read && (
                                                     <span className="mt-2 h-2 w-2 bg-emerald-500 rounded-full"></span>
@@ -154,44 +164,47 @@ export default function Topbar({ user, onLogout }) {
                                                 <div className="flex-1">
                                                     <p className="text-sm">{n.message}</p>
                                                     <span className="text-xs text-gray-400">
-                                                        {new Date(n.createdAt).toLocaleString()}
-                                                    </span>
+                            {new Date(n.createdAt).toLocaleString()}
+                          </span>
                                                 </div>
                                                 {loadingIds.includes(n.id) && <span>⏳</span>}
                                             </div>
                                         ))
                                     )}
                                 </div>
+
+                                <a
+                                    href="/notifications"
+                                    className="px-4 py-3 text-center text-sm text-[#00A662] hover:bg-gray-50 border-t"
+                                >
+                                    View All Notifications
+                                </a>
+
                             </div>
                         )}
                     </div>
 
                     {/* USER */}
                     {user && (
-                        <div className="relative flex items-center gap-3" ref={menuRef}>
-                            <div className="text-right hidden sm:block">
-                                <p className="text-sm font-semibold">{user.username}</p>
-                                <p className="text-xs text-gray-500">{user.role}</p>
-                            </div>
-
+                        <div className="relative" ref={menuRef}>
                             <img
                                 src={user.avatar || profile}
                                 alt="profile"
                                 onClick={() => setOpen(!open)}
-                                className="w-9 h-9 rounded-full border cursor-pointer"
+                                className="w-10 h-10 rounded-full border cursor-pointer"
                             />
 
                             {open && (
-                                <div className="absolute right-0 top-12 w-48 bg-white border rounded shadow">
-                                    <button className="w-full px-4 py-3 hover:bg-gray-100 text-sm">
+                                <div className="absolute right-0 top-12 w-56 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                                    <a href="/profile" className="px-4 py-3 hover:bg-gray-50 flex items-center gap-2">
                                         <FaUserCircle /> Profile
-                                    </button>
-                                    <button className="w-full px-4 py-3 hover:bg-gray-100 text-sm">
+                                    </a>
+                                    <a href="/settings" className="px-4 py-3 hover:bg-gray-50 flex items-center gap-2">
                                         <FaCog /> Settings
-                                    </button>
+                                    </a>
                                     <button
                                         onClick={onLogout}
-                                        className="w-full px-4 py-3 text-red-600 hover:bg-red-50 text-sm"
+                                        className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-600 flex items-center gap-2"
                                     >
                                         <FaSignOutAlt /> Logout
                                     </button>

@@ -11,7 +11,7 @@ export default function CreateTask({ onTaskAdded }) {
         "HR", "Sales", "Admin", "Compliance", "Health",
     ];
 
-    const STATUS_OPTIONS = ["TODO", "IN_PROGRESS", "DONE"];
+    const STATUS_OPTIONS = ["TODO"];
     const PRIORITY_OPTIONS = ["LOW", "MEDIUM", "HIGH"];
 
     const [users, setUsers] = useState([]);
@@ -24,6 +24,7 @@ export default function CreateTask({ onTaskAdded }) {
         categories: [],
         assignedTo: null
     });
+    const [file, setFile] = useState(null);
     const [userSearch, setUserSearch] = useState("");
     const [errors, setErrors] = useState({});
     const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -79,11 +80,21 @@ export default function CreateTask({ onTaskAdded }) {
         setErrors({});
 
         try {
-            const payload = { ...newTask, dueDate: newTask.dueDate, assignedTo: newTask.assignedTo };
+            const formData = new FormData();
+            formData.append("title", newTask.title);
+            formData.append("description", newTask.description);
+            formData.append("dueDate", newTask.dueDate);
+            formData.append("priority", newTask.priority);
+            formData.append("status", newTask.status);
+            formData.append("assignedTo", newTask.assignedTo);
+            formData.append("categories", JSON.stringify(newTask.categories));
+
+            if (file) formData.append("file", file);
+
             const res = await fetch(`${API_BASE}/add`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify(payload),
+                headers: { Authorization: `Bearer ${token}` },
+                body: formData
             });
 
             if (!res.ok) throw new Error("Failed to save task");
@@ -91,7 +102,9 @@ export default function CreateTask({ onTaskAdded }) {
             const savedTask = await res.json();
             if (onTaskAdded) onTaskAdded(savedTask);
 
+            // Reset form
             setNewTask({ title: "", description: "", dueDate: "", priority: "LOW", status: "TODO", categories: [], assignedTo: null });
+            setFile(null);
             setUserSearch("");
             setShowUserDropdown(false);
             alert("Task added successfully");
@@ -141,6 +154,16 @@ export default function CreateTask({ onTaskAdded }) {
                         rows={3}
                         value={newTask.description}
                         onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                    />
+                </div>
+
+                {/* ATTACHMENT */}
+                <div className="md:col-span-2 flex flex-col">
+                    <label className="mb-1 text-sm font-medium">Attachment (optional)</label>
+                    <input
+                        type="file"
+                        onChange={(e) => setFile(e.target.files[0])}
+                        className="border border-gray-300 px-2 py-1 text-sm rounded focus:outline-none focus:ring-1 focus:ring-[#00A662]"
                     />
                 </div>
 
