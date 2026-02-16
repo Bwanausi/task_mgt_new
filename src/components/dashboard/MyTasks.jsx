@@ -1,16 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../auth/AuthContext";
 import api from "../../api/axios";
 
 export default function MyTask() {
     const { user, token } = useAuth();
+
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const [selectedTask, setSelectedTask] = useState(null);
     const [submitMessage, setSubmitMessage] = useState("");
+    const [comments, setComments] = useState([]);
 
-    // ================= FETCH MY TASKS =================
+    // ===== Pagination =====
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 5;
+
+    // ===== Category Filter =====
+    const [selectedCategory, setSelectedCategory] = useState("");
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    // ================= FETCH TASKS =================
     useEffect(() => {
         if (!user) return;
 
@@ -30,6 +41,18 @@ export default function MyTask() {
         fetchMyTasks();
     }, [user, token]);
 
+    // ================= FETCH COMMENTS =================
+    const fetchComments = async (taskId) => {
+        try {
+            const res = await api.get(`/task/${taskId}/comments`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            setComments(res.data);
+        } catch (err) {
+            console.error("Failed to load comments", err);
+        }
+    };
+
     // ================= ACCEPT TASK =================
     const handleAccept = async (taskId) => {
         try {
@@ -38,9 +61,7 @@ export default function MyTask() {
             });
 
             setTasks(prev =>
-                prev.map(t =>
-                    t.id === taskId ? { ...t, status: "IN_PROGRESS" } : t
-                )
+                prev.map(t => (t.id === taskId ? { ...t, status: "IN_PROGRESS" } : t))
             );
 
             setSelectedTask(null);
@@ -61,7 +82,7 @@ export default function MyTask() {
                 comment: submitMessage,
                 commentById: user.userId,
                 role: "NORMAL_USER",
-                status: task.status   // ✅ current status sent
+                status: task.status
             };
 
             await api.post(`/task/submit/${task.id}`, payload, {
@@ -69,82 +90,186 @@ export default function MyTask() {
             });
 
             setTasks(prev =>
-                prev.map(t =>
-                    t.id === task.id ? { ...t, status: "SUBMITTED" } : t
-                )
+                prev.map(t => (t.id === task.id ? { ...t, status: "SUBMITTED" } : t))
             );
 
-            setSelectedTask(null);
             setSubmitMessage("");
+            setSelectedTask(null);
 
         } catch (err) {
             console.error("Submit failed", err);
         }
     };
 
-    // ================= UI =================
+    // ================= STATUS COLOR =================
+    const statusColor = {
+        TODO: "bg-gray-200 text-gray-800",
+        IN_PROGRESS: "bg-blue-200 text-blue-800",
+        SUBMITTED: "bg-blue-200 text-blue-800",
+        APPROVED: "bg-green-200 text-green-800",
+        REJECTED: "bg-red-200 text-red-800",
+    };
+
+    // ===== Category options =====
+    const categories = Array.from(
+        new Set(tasks.flatMap(task => task.categories?.map(c => c.name) || []))
+    );
+
+    // ===== Filtered tasks =====
+    const filteredTasks = selectedCategory
+        ? tasks.filter(task => task.categories?.some(c => c.name === selectedCategory))
+        : tasks;
+
+    // ===== Pagination logic =====
+    const totalPages = Math.ceil(filteredTasks.length / ITEMS_PER_PAGE);
+    const paginatedTasks = filteredTasks.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
+    // ===== Close dropdown on outside click =====
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     if (loading) return <p className="text-center mt-4">Loading tasks...</p>;
     if (!tasks.length) return <p className="text-center mt-4">No tasks assigned to you.</p>;
 
     return (
-        <div className="max-w-4xl mx-auto p-4">
-            <h2 className="text-2xl font-bold mb-4 text-blue-700">My Tasks</h2>
+        <div className="max-w-6xl mx-auto p-4">
+            <h2 className="text-xl font-semibold text-[#00A662] mb-4">My Tasks</h2>
 
-            {/* TASK LIST */}
-            {tasks.map(task => (
-                <div
-                    key={task.id}
-                    onClick={() => setSelectedTask(task)}
-                    className="cursor-pointer bg-white border-l-4 rounded p-4 mb-4 shadow-md hover:shadow-lg transition"
-                    style={{
-                        borderColor:
-                            task.priority === "HIGH"
-                                ? "#ef4444"
-                                : task.priority === "MEDIUM"
-                                    ? "#f59e0b"
-                                    : "#22c55e",
-                    }}
+            {/* CATEGORY FILTER */}
+            <div className="mb-4 w-64 relative" ref={dropdownRef}>
+                <button
+                    className="w-full border border-gray-300 rounded-full px-4 py-2 shadow-sm text-gray-700 font-medium flex justify-between items-center
+                     hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00A662] transition"
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
                 >
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-lg font-semibold">{task.title}</h3>
-                        <span
-                            className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                task.status === "TODO"
-                                    ? "bg-gray-200 text-gray-800"
-                                    : task.status === "IN_PROGRESS"
-                                        ? "bg-blue-200 text-blue-800"
-                                        : task.status === "SUBMITTED"
-                                            ? "bg-yellow-200 text-yellow-800"
-                                            : "bg-green-200 text-green-800"
+                    {selectedCategory || "All Categories"}
+                    <svg
+                        className="h-4 w-4 text-gray-400 ml-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                        />
+                    </svg>
+                </button>
+                {dropdownOpen && (
+                    <ul className="absolute mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                        <li
+                            onClick={() => {
+                                setSelectedCategory("");
+                                setDropdownOpen(false);
+                                setCurrentPage(1);
+                            }}
+                            className={`px-4 py-2 cursor-pointer hover:bg-[#00A662]/20 hover:text-[#007f50] ${
+                                selectedCategory === "" ? "bg-[#00A662]/10" : ""
                             }`}
                         >
-                            {task.status}
-                        </span>
-                    </div>
+                            All Categories
+                        </li>
+                        {categories.map((cat) => (
+                            <li
+                                key={cat}
+                                onClick={() => {
+                                    setSelectedCategory(cat);
+                                    setDropdownOpen(false);
+                                    setCurrentPage(1);
+                                }}
+                                className={`px-4 py-2 cursor-pointer hover:bg-[#00A662]/20 hover:text-[#007f50] ${
+                                    selectedCategory === cat ? "bg-[#00A662]/10" : ""
+                                }`}
+                            >
+                                {cat}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
 
-                    <p className="text-sm text-gray-600">
-                        <strong>Due:</strong> {new Date(task.dueDate).toLocaleString()}
-                    </p>
+            {/* TASK TABLE */}
+            <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+                <table className="min-w-full text-sm text-left text-gray-700">
+                    <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
+                    <tr>
+                        <th className="px-4 py-2">Title</th>
+                        <th className="px-4 py-2">Due Date</th>
+                        <th className="px-4 py-2">Priority</th>
+                        <th className="px-4 py-2">Categories</th>
+                        <th className="px-4 py-2">Status</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {paginatedTasks.map(task => (
+                        <tr
+                            key={task.id}
+                            onClick={() => { setSelectedTask(task); fetchComments(task.id); }}
+                            className="cursor-pointer hover:bg-gray-50 transition border-b border-gray-200"
+                        >
+                            <td className="px-4 py-2 font-medium">{task.title}</td>
+                            <td className="px-4 py-2 text-red-500">{new Date(task.dueDate).toLocaleString()}</td>
+                            <td className="px-4 py-2">{task.priority}</td>
+                            <td className="px-4 py-2">
+                                {task.categories?.map(c => (
+                                    <span key={c.id} className="px-2 py-1 bg-gray-100 rounded-full text-xs mr-1">{c.name}</span>
+                                ))}
+                            </td>
+                            <td className="px-4 py-2">
+                                    <span className={`px-2 py-1 text-xs font-semibold rounded ${statusColor[task.status]}`}>
+                                        {task.status}
+                                    </span>
+                            </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+            </div>
 
-                    <p className="text-sm">
-                        <strong>Priority:</strong>{" "}
-                        <span className={`font-bold ${
-                            task.priority === "HIGH"
-                                ? "text-red-600"
-                                : task.priority === "MEDIUM"
-                                    ? "text-yellow-600"
-                                    : "text-green-600"
-                        }`}>
-                            {task.priority}
-                        </span>
-                    </p>
-
-                    <p className="text-sm text-gray-600">
-                        <strong>Categories:</strong>{" "}
-                        {task.categories.map(c => c.name).join(", ")}
-                    </p>
+            {/* PAGINATION */}
+            {totalPages > 1 && (
+                <div className="flex justify-center mt-4 space-x-2">
+                    <button
+                        onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                        className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                        disabled={currentPage === 1}
+                    >
+                        Prev
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`px-3 py-1 rounded transition ${
+                                currentPage === page
+                                    ? "bg-[#00A662] text-white"
+                                    : "bg-gray-200 hover:bg-gray-300"
+                            }`}
+                        >
+                            {page}
+                        </button>
+                    ))}
+                    <button
+                        onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                        className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+                        disabled={currentPage === totalPages}
+                    >
+                        Next
+                    </button>
                 </div>
-            ))}
+            )}
 
             {/* MODAL */}
             {selectedTask && (
@@ -152,11 +277,11 @@ export default function MyTask() {
                     <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
 
                         {/* HEADER */}
-                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 flex justify-between items-center">
+                        <div className="bg-[#00A662] text-white p-4 flex justify-between items-center">
                             <h3 className="text-lg font-bold">{selectedTask.title}</h3>
                             <button
-                                onClick={() => { setSelectedTask(null); setSubmitMessage(""); }}
-                                className="text-white hover:text-red-300 text-xl"
+                                onClick={() => { setSelectedTask(null); setSubmitMessage(""); setComments([]); }}
+                                className="text-white hover:text-gray-200 text-xl"
                             >
                                 ✕
                             </button>
@@ -164,24 +289,44 @@ export default function MyTask() {
 
                         {/* BODY */}
                         <div className="p-4 space-y-3 text-gray-700">
-                            <p>
-                                <strong>Description:</strong><br />
-                                {selectedTask.description}
-                            </p>
+                            <p><strong>Description:</strong><br />{selectedTask.description}</p>
+                            <p><strong>Due:</strong> {new Date(selectedTask.dueDate).toLocaleString()}</p>
+                            <p><strong>Priority:</strong> {selectedTask.priority}</p>
+                            <p><strong>Categories:</strong> {selectedTask.categories?.map(c => c.name).join(", ")}</p>
+
+                            <hr />
+
+                            <h4 className="font-semibold">Task Messages</h4>
+                            {comments.length === 0 && <p className="text-sm text-gray-400">No messages yet</p>}
+                            {comments.map(c => (
+                                <div
+                                    key={c.id}
+                                    className={`p-2 rounded text-sm ${
+                                        c.commentBy?.id === user.userId
+                                            ? "bg-green-200"
+                                            : c.role === "ADMIN"
+                                                ? "bg-blue-100"
+                                                : "bg-gray-100"
+                                    }`}
+                                >
+                                    <p>{c.comment}</p>
+                                    <p className="text-xs text-gray-500">{c.commentBy?.id === user.userId ? "ME" : c.role} • {new Date(c.createdAt).toLocaleString()}</p>
+                                </div>
+                            ))}
                         </div>
 
                         {/* FOOTER */}
-                        <div className="bg-gray-50 p-4 flex justify-end gap-2">
+                        <div className="bg-gray-50 p-4 flex flex-col gap-2">
                             {selectedTask.status === "TODO" && (
                                 <button
                                     onClick={() => handleAccept(selectedTask.id)}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg self-end"
                                 >
                                     Accept
                                 </button>
                             )}
 
-                            {selectedTask.status === "IN_PROGRESS" && (
+                            {(selectedTask.status === "IN_PROGRESS" || selectedTask.status === "REJECTED") && (
                                 <div className="w-full">
                                     <textarea
                                         rows="3"
@@ -205,6 +350,7 @@ export default function MyTask() {
                     </div>
                 </div>
             )}
+
         </div>
     );
 }

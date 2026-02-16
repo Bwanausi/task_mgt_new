@@ -24,60 +24,60 @@ export default function Sidebar({ user, active, onChange }) {
         required.length === 0 ||
         required.some((p) => user?.permissions?.includes(p));
 
-    const hasCreateTask = user?.permissions?.includes("TASK_CREATE");
-
     const filteredItems = SIDEBAR_ITEMS.filter((item) =>
         hasPermission(item.permissions)
     );
 
-    const dashboardItem = filteredItems.find(
-        (item) => item.key === "dashboard"
-    );
-
-    const createTaskItem = hasCreateTask
-        ? filteredItems.find((item) => item.key === "createTask")
-        : null;
-
-    const otherItems = filteredItems.filter(
-        (item) =>
-            item.key !== "dashboard" &&
-            item.key !== "createTask"
-    );
-
-    const visibleItems = [
-        ...(dashboardItem ? [dashboardItem] : []),
-        ...(createTaskItem ? [createTaskItem] : []),
-        ...otherItems,
-    ];
-
     return (
-        <aside className="w-64 bg-teal-800 text-white min-h-[calc(100vh-64px)] shadow">
-            {/* TITLE */}
-            <div className="px-6 py-5 text-xl font-bold tracking-wide border-b border-teal-700">
-                Task List
+        <aside className="w-64 bg-[#F8FAFC] border-r border-gray-200 min-h-[calc(100vh-64px)] flex flex-col">
+
+            {/* HEADER */}
+            <div className="px-6 py-6 text-lg font-semibold text-slate-800">
+                Workspace
             </div>
 
             {/* MENU */}
-            <nav className="flex-1 py-3">
-                {visibleItems.map((item) => (
-                    <button
-                        key={item.key}
-                        onClick={() => onChange(item.key)}
-                        className={`w-full flex items-center gap-3 px-6 py-3 text-sm font-medium transition text-left
-                            ${
-                            active === item.key
-                                ? "bg-white text-teal-800"
-                                : "hover:bg-teal-700"
-                        }
-                        `}
-                    >
-                        <span className="text-base">
-                            {ICONS_MAP[item.key]}
-                        </span>
-                        {item.label}
-                    </button>
-                ))}
+            <nav className="flex-1 px-3 space-y-1">
+                {filteredItems.map((item) => {
+                    const isActive = active === item.key;
+
+                    return (
+                        <button
+                            key={item.key}
+                            onClick={() => onChange(item.key)}
+                            className={`group w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-all text-left
+                                ${
+                                isActive
+                                    ? "bg-[#00A662] text-white shadow-sm"
+                                    : "text-slate-600 hover:bg-white hover:shadow-sm"
+                            }
+                            `}
+                        >
+                            <span
+                                className={`text-base transition-colors ${
+                                    isActive
+                                        ? "text-white"
+                                        : "text-slate-400 group-hover:text-[#00A662]"
+                                }`}
+                            >
+                                {ICONS_MAP[item.key]}
+                            </span>
+
+                            {item.label}
+                        </button>
+                    );
+                })}
             </nav>
+
+            {/* FOOTER USER (Optional Premium Touch) */}
+            <div className="p-4 border-t border-gray-200">
+                <div className="text-xs text-slate-500">
+                    Logged in as
+                </div>
+                <div className="text-sm font-medium text-slate-800">
+                    {user?.username}
+                </div>
+            </div>
         </aside>
     );
 }

@@ -22,7 +22,7 @@ export default function Dashboard() {
         navigate("/login");
     };
 
-    // Quick stats for demo purposes
+    // Demo Data
     const totalTasks = 12;
     const completedTasks = 5;
     const pendingTasks = totalTasks - completedTasks;
@@ -43,58 +43,72 @@ export default function Dashboard() {
             case "settings":
                 return <Settings />;
             default:
-                // Dashboard welcome panel with stats
                 return (
                     <div className="space-y-6">
-                        {/* Welcome Card */}
-                        <div className="bg-white p-6 rounded shadow hover:shadow-md transition">
-                            <h1 className="text-2xl font-semibold text-teal-800">
-                                Welcome back, {user.username} 👋
+
+                        {/* Welcome Section */}
+                        <div className="bg-white border border-gray-300 p-6 shadow-sm">
+                            <h1 className="text-xl font-semibold text-gray-800">
+                                Dashboard Overview
                             </h1>
-                            <p className="text-gray-500 mt-2">
-                                Role: {user.roles && user.roles.length > 0 ? user.roles.join(", ") : "N/A"}
+                            <p className="text-sm text-gray-600 mt-2">
+                                Welcome, {user.username}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                                Role: {user.roles?.length > 0
+                                ? user.roles.join(", ")
+                                : "N/A"}
                             </p>
                         </div>
 
-                        {/* Quick Stats Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <StatCard title="Total Tasks" value={totalTasks} color="bg-blue-500" />
-                            <StatCard title="Completed Tasks" value={completedTasks} color="bg-green-500" />
-                            <StatCard title="Pending Tasks" value={pendingTasks} color="bg-yellow-500" />
-                            <StatCard title="Total Users" value={totalUsers} color="bg-purple-500" />
+                        {/* KPI Section */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                            <StatCard title="Total Tasks" value={totalTasks} />
+                            <StatCard title="Completed Tasks" value={completedTasks} />
+                            <StatCard title="Pending Tasks" value={pendingTasks} />
+                            <StatCard title="Total Users" value={totalUsers} />
                         </div>
+
                     </div>
                 );
         }
     };
 
     return (
-        <div className="min-h-screen bg-topcolor">
+        <div className="min-h-screen bg-gray-100">
 
-            {/* 🔹 FULL WIDTH TOPBAR */}
+            {/* Topbar */}
             <Topbar user={user} onLogout={handleLogout} />
 
-            {/* 🔹 BELOW TOPBAR */}
             <div className="flex">
 
-                {/* SIDEBAR */}
-                <Sidebar user={user} active={active} onChange={setActive} />
+                {/* Sidebar */}
+                <Sidebar
+                    user={user}
+                    active={active}
+                    onChange={setActive}
+                />
 
-                {/* MAIN CONTENT */}
-                <main className="flex-1 p-6 bg-gray-100 min-h-[calc(100vh-64px)]">
+                {/* Main Content */}
+                <main className="flex-1 p-8 bg-gray-50 min-h-[calc(100vh-64px)]">
                     {renderContent()}
                 </main>
+
             </div>
         </div>
     );
 }
 
-// StatCard component
-const StatCard = ({ title, value, color }) => (
-    <div
-        className={`flex flex-col justify-center items-center p-4 rounded shadow text-white ${color} hover:shadow-md transition`}
-    >
-        <p className="text-sm font-medium">{title}</p>
-        <p className="text-2xl font-bold mt-2">{value}</p>
+/* ---------- Office Style Stat Card ---------- */
+
+const StatCard = ({ title, value }) => (
+    <div className="bg-white border border-gray-300 shadow-sm p-5">
+        <p className="text-sm font-medium text-gray-600">
+            {title}
+        </p>
+
+        <p className="text-2xl font-semibold text-gray-800 mt-3">
+            {value}
+        </p>
     </div>
 );

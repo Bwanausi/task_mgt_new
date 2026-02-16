@@ -29,19 +29,10 @@ export default function CreateTask({ onTaskAdded }) {
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const dropdownRef = useRef(null);
 
-    const priorityColor = {
-        LOW: "bg-green-500",
-        MEDIUM: "bg-yellow-500",
-        HIGH: "bg-red-500",
-    };
-
-    /* ================= LOAD USERS ================= */
     useEffect(() => {
         const fetchUsers = async () => {
             try {
-                const res = await fetch(USER_API, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
+                const res = await fetch(USER_API, { headers: { Authorization: `Bearer ${token}` } });
                 if (!res.ok) throw new Error("Failed to load users");
                 const data = await res.json();
                 setUsers(data);
@@ -52,33 +43,25 @@ export default function CreateTask({ onTaskAdded }) {
         fetchUsers();
     }, [token]);
 
-    /* ================= FILTERED USERS ================= */
-    const filteredUsers = users.filter(u =>
-        u.username.toLowerCase().includes(userSearch.toLowerCase())
-    );
+    const filteredUsers = users.filter(u => u.username.toLowerCase().includes(userSearch.toLowerCase()));
 
-    /* ================= CLOSE DROPDOWN ON CLICK OUTSIDE ============ */
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-                setShowUserDropdown(false);
-            }
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowUserDropdown(false);
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    /* ================= HANDLE CATEGORY SELECT ================= */
     const toggleCategory = (cat) => {
-        setNewTask(prev => {
-            if (prev.categories.includes(cat)) {
-                return { ...prev, categories: prev.categories.filter(c => c !== cat) };
-            }
-            return { ...prev, categories: [...prev.categories, cat] };
-        });
+        setNewTask(prev => ({
+            ...prev,
+            categories: prev.categories.includes(cat)
+                ? prev.categories.filter(c => c !== cat)
+                : [...prev.categories, cat]
+        }));
     };
 
-    /* ================= ADD TASK ================= */
     const handleAddTask = async (e) => {
         e.preventDefault();
 
@@ -96,19 +79,10 @@ export default function CreateTask({ onTaskAdded }) {
         setErrors({});
 
         try {
-            // Send dueDate as full ISO string
-            const payload = {
-                ...newTask,
-                dueDate: newTask.dueDate, // e.g., "2026-02-28T17:00"
-                assignedTo: newTask.assignedTo, // backend expects user ID
-            };
-
+            const payload = { ...newTask, dueDate: newTask.dueDate, assignedTo: newTask.assignedTo };
             const res = await fetch(`${API_BASE}/add`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify(payload),
             });
 
@@ -117,21 +91,10 @@ export default function CreateTask({ onTaskAdded }) {
             const savedTask = await res.json();
             if (onTaskAdded) onTaskAdded(savedTask);
 
-            // reset form
-            setNewTask({
-                title: "",
-                description: "",
-                dueDate: "",
-                priority: "LOW",
-                status: "TODO",
-                categories: [],
-                assignedTo: null
-            });
+            setNewTask({ title: "", description: "", dueDate: "", priority: "LOW", status: "TODO", categories: [], assignedTo: null });
             setUserSearch("");
             setShowUserDropdown(false);
-            alert("Task Added Successfull");
-
-
+            alert("Task added successfully");
         } catch (err) {
             console.error(err);
             alert("Failed to add task");
@@ -139,116 +102,106 @@ export default function CreateTask({ onTaskAdded }) {
     };
 
     return (
-        <div className="max-w-4xl mx-auto bg-white p-6 border rounded-lg shadow">
-            <h2 className="text-xl font-semibold text-teal-800 mb-4">Create New Task</h2>
+        <div className="max-w-3xl mx-auto bg-white p-5 border border-gray-200 rounded shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-800 mb-4">Create New Task</h2>
 
             <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleAddTask}>
+
                 {/* TITLE */}
-                <div>
-                    <label className="block mb-1 font-semibold">Title</label>
+                <div className="flex flex-col">
+                    <label className="mb-1 text-sm font-medium">Title</label>
                     <input
                         type="text"
                         placeholder="Task title"
-                        className="w-full p-3 border rounded-lg"
+                        className="border border-gray-300 px-2 py-1 text-sm rounded focus:outline-none focus:ring-1 focus:ring-[#00A662]"
                         value={newTask.title}
                         onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
                     />
-                    {errors.title && <p className="text-red-500 text-sm">{errors.title}</p>}
+                    {errors.title && <p className="text-red-500 text-xs mt-0.5">{errors.title}</p>}
                 </div>
 
-                {/* DUE DATE & TIME */}
-                <div>
-                    <label className="block mb-1 font-semibold">Due Date & Time</label>
+                {/* DUE DATE */}
+                <div className="flex flex-col">
+                    <label className="mb-1 text-sm font-medium">Due Date & Time</label>
                     <input
                         type="datetime-local"
-                        className="w-full p-3 border rounded-lg"
+                        className="border border-gray-300 px-2 py-1 text-sm rounded focus:outline-none focus:ring-1 focus:ring-[#00A662]"
                         value={newTask.dueDate}
                         onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
                     />
-                    {errors.dueDate && <p className="text-red-500 text-sm">{errors.dueDate}</p>}
+                    {errors.dueDate && <p className="text-red-500 text-xs mt-0.5">{errors.dueDate}</p>}
                 </div>
 
                 {/* DESCRIPTION */}
-                <div className="md:col-span-2">
-                    <label className="block mb-1 font-semibold">Description</label>
-                    <input
-                        type="text"
+                <div className="md:col-span-2 flex flex-col">
+                    <label className="mb-1 text-sm font-medium">Description</label>
+                    <textarea
                         placeholder="Task description"
-                        className="w-full p-3 border rounded-lg"
+                        className="border border-gray-300 px-2 py-1 text-sm rounded focus:outline-none focus:ring-1 focus:ring-[#00A662] resize-none"
+                        rows={3}
                         value={newTask.description}
                         onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                     />
                 </div>
 
                 {/* PRIORITY */}
-                <div>
-                    <label className="block mb-1 font-semibold">Priority</label>
+                <div className="flex flex-col">
+                    <label className="mb-1 text-sm font-medium">Priority</label>
                     <select
-                        className="w-full p-3 border rounded-lg"
+                        className="border border-gray-300 px-2 py-1 text-sm rounded focus:outline-none focus:ring-1 focus:ring-[#00A662]"
                         value={newTask.priority}
                         onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
                     >
-                        {PRIORITY_OPTIONS.map(opt => (
-                            <option key={opt} value={opt}>{opt}</option>
-                        ))}
+                        {PRIORITY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                 </div>
 
                 {/* STATUS */}
-                <div>
-                    <label className="block mb-1 font-semibold">Status</label>
+                <div className="flex flex-col">
+                    <label className="mb-1 text-sm font-medium">Status</label>
                     <select
-                        className="w-full p-3 border rounded-lg"
+                        className="border border-gray-300 px-2 py-1 text-sm rounded focus:outline-none focus:ring-1 focus:ring-[#00A662]"
                         value={newTask.status}
                         onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
                     >
-                        {STATUS_OPTIONS.map(opt => (
-                            <option key={opt} value={opt}>{opt}</option>
-                        ))}
+                        {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                 </div>
 
-                {/* CATEGORIES MULTISELECT */}
-                <div className="md:col-span-2 border p-2 rounded-lg">
-                    <label className="block mb-1 font-semibold">Categories</label>
+                {/* CATEGORIES */}
+                <div className="md:col-span-2 flex flex-col border border-gray-300 p-2 rounded">
+                    <label className="mb-1 text-sm font-medium">Categories</label>
                     <div className="flex flex-wrap gap-2">
                         {CATEGORY_OPTIONS.map(cat => (
-                            <button
-                                type="button"
-                                key={cat}
-                                className={`px-3 py-1 rounded-full border ${
-                                    newTask.categories.includes(cat)
-                                        ? "bg-teal-700 text-white"
-                                        : "bg-white text-gray-700"
-                                }`}
-                                onClick={() => toggleCategory(cat)}
-                            >
+                            <label key={cat} className="flex items-center gap-1 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={newTask.categories.includes(cat)}
+                                    onChange={() => toggleCategory(cat)}
+                                />
                                 {cat}
-                            </button>
+                            </label>
                         ))}
                     </div>
-                    {errors.categories && <p className="text-red-500 text-sm mt-1">{errors.categories}</p>}
+                    {errors.categories && <p className="text-red-500 text-xs mt-0.5">{errors.categories}</p>}
                 </div>
 
-                {/* ASSIGN USER (SEARCHABLE AUTOCOMPLETE) */}
-                <div className="md:col-span-2 relative" ref={dropdownRef}>
-                    <label className="block mb-1 font-semibold">Assign User</label>
+                {/* ASSIGN USER */}
+                <div className="md:col-span-2 relative flex flex-col" ref={dropdownRef}>
+                    <label className="mb-1 text-sm font-medium">Assign User</label>
                     <input
                         type="text"
-                        placeholder="Type username to assign"
-                        className="w-full p-3 border rounded-lg mb-1"
+                        placeholder="Type username"
+                        className="border border-gray-300 px-2 py-1 text-sm rounded focus:outline-none focus:ring-1 focus:ring-[#00A662]"
                         value={userSearch}
-                        onChange={(e) => {
-                            setUserSearch(e.target.value);
-                            setShowUserDropdown(!!e.target.value);
-                        }}
+                        onChange={(e) => { setUserSearch(e.target.value); setShowUserDropdown(!!e.target.value); }}
                     />
                     {showUserDropdown && filteredUsers.length > 0 && (
-                        <ul className="absolute z-10 w-full bg-white border rounded-lg max-h-40 overflow-y-auto">
+                        <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded max-h-32 overflow-y-auto text-sm">
                             {filteredUsers.map(u => (
                                 <li
                                     key={u.userId}
-                                    className="px-3 py-2 hover:bg-teal-100 cursor-pointer"
+                                    className="px-2 py-1 hover:bg-[#00A662] hover:text-white cursor-pointer transition"
                                     onClick={() => {
                                         setNewTask({ ...newTask, assignedTo: u.userId });
                                         setUserSearch(u.username);
@@ -260,18 +213,19 @@ export default function CreateTask({ onTaskAdded }) {
                             ))}
                         </ul>
                     )}
-                    {errors.assignedTo && <p className="text-red-500 text-sm">{errors.assignedTo}</p>}
+                    {errors.assignedTo && <p className="text-red-500 text-xs mt-0.5">{errors.assignedTo}</p>}
                 </div>
 
-                {/* SUBMIT */}
-                <div className="md:col-span-2">
+                {/* SUBMIT BUTTON */}
+                <div className="md:col-span-2 flex justify-end">
                     <button
                         type="submit"
-                        className="bg-teal-700 text-white px-5 py-2 rounded-lg hover:bg-teal-800"
+                        className="bg-[#00A662] text-white text-sm px-4 py-1 rounded hover:bg-[#008f4e] transition"
                     >
                         Create Task
                     </button>
                 </div>
+
             </form>
         </div>
     );
