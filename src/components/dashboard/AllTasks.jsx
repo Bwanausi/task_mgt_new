@@ -245,7 +245,7 @@ export default function AllTask() {
 
             {/* TASK POPUP MODAL */}
             {selectedTask && (
-                <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4">
+                <div className="fixed inset-0 bg-gray-50 flex justify-center items-center z-50 p-4">
                     <div className="bg-white w-full max-w-lg max-h-[85vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col font-sans border border-gray-200">
 
                         {/* HEADER */}
@@ -312,7 +312,7 @@ export default function AllTask() {
 
                         {/* FOOTER - CEO ACTIONS */}
                         {user.roles?.includes("CEO") && selectedTask.status === "SUBMITTED" && (
-                            <div className="bg-gray-50 p-5 border-t flex flex-col gap-3">
+                            <div className="bg-gray-50 p-5 border-t border-gray-200 flex flex-col gap-3">
                 <textarea
                     rows="3"
                     placeholder="Enter message..."

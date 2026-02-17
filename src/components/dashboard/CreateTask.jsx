@@ -66,6 +66,7 @@ export default function CreateTask({ onTaskAdded }) {
     const handleAddTask = async (e) => {
         e.preventDefault();
 
+        // Validation
         const validationErrors = {};
         if (!newTask.title.trim()) validationErrors.title = "Title required";
         if (!newTask.categories.length) validationErrors.categories = "Select at least one category";
@@ -80,20 +81,24 @@ export default function CreateTask({ onTaskAdded }) {
         setErrors({});
 
         try {
-            const formData = new FormData();
-            formData.append("title", newTask.title);
-            formData.append("description", newTask.description);
-            formData.append("dueDate", newTask.dueDate);
-            formData.append("priority", newTask.priority);
-            formData.append("status", newTask.status);
-            formData.append("assignedTo", newTask.assignedTo);
-            formData.append("categories", JSON.stringify(newTask.categories));
+            // Prepare AddTaskDto
+            const taskDto = {
+                title: newTask.title,
+                description: newTask.description,
+                dueDate: newTask.dueDate,
+                priority: newTask.priority,
+                status: newTask.status,
+                assignedTo: newTask.assignedTo,
+                categories: newTask.categories
+            };
 
+            const formData = new FormData();
+            formData.append("task", new Blob([JSON.stringify(taskDto)], { type: "application/json" }));
             if (file) formData.append("file", file);
 
             const res = await fetch(`${API_BASE}/add`, {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
+                headers: { Authorization: `Bearer ${token}` }, // Do NOT set Content-Type manually
                 body: formData
             });
 
@@ -103,7 +108,15 @@ export default function CreateTask({ onTaskAdded }) {
             if (onTaskAdded) onTaskAdded(savedTask);
 
             // Reset form
-            setNewTask({ title: "", description: "", dueDate: "", priority: "LOW", status: "TODO", categories: [], assignedTo: null });
+            setNewTask({
+                title: "",
+                description: "",
+                dueDate: "",
+                priority: "LOW",
+                status: "TODO",
+                categories: [],
+                assignedTo: null
+            });
             setFile(null);
             setUserSearch("");
             setShowUserDropdown(false);
