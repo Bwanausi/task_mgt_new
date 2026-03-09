@@ -21,7 +21,7 @@ export default function Users() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    const [showModal, setShowModal] = useState(false);
+    const [showForm, setShowForm] = useState(false);
     const [isEdit, setIsEdit] = useState(false);
 
     const [formUser, setFormUser] = useState({
@@ -50,7 +50,15 @@ export default function Users() {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!res.ok) throw new Error("Fetch failed");
-                setUsers(await res.json());
+                const data = await res.json();
+
+                // normalize roles to objects if needed
+                const normalized = data.map(u => ({
+                    ...u,
+                    roles: u.roles?.map(r => typeof r === "string" ? { roleName: r } : r) || [],
+                }));
+
+                setUsers(normalized);
             } catch (err) {
                 console.error(err);
                 setError("Failed to load users");
@@ -64,16 +72,16 @@ export default function Users() {
 
     /* ================= PERMISSIONS ================= */
     const togglePermission = (perm) => {
-        setFormUser((prev) => ({
+        setFormUser(prev => ({
             ...prev,
             permissions: prev.permissions.includes(perm)
-                ? prev.permissions.filter((p) => p !== perm)
+                ? prev.permissions.filter(p => p !== perm)
                 : [...prev.permissions, perm],
         }));
     };
 
     /* ================= ADD / EDIT ================= */
-    const openAddModal = () => {
+    const openAddForm = () => {
         setIsEdit(false);
         setFormUser({
             userId: null,
@@ -85,14 +93,14 @@ export default function Users() {
             status: "ACTIVE",
             permissions: [],
         });
-        setShowModal(true);
+        setShowForm(true);
     };
 
-    const openEditModal = (u) => {
+    const openEditForm = (u) => {
         setIsEdit(true);
 
         const permissionsFromRoles =
-            u.roles?.flatMap((role) => role.permissions?.map((p) => p.name) || []) || [];
+            u.roles?.flatMap(role => role.permissions?.map(p => p.name) || []) || [];
 
         setFormUser({
             userId: u.userId,
@@ -105,7 +113,7 @@ export default function Users() {
             permissions: permissionsFromRoles,
         });
 
-        setShowModal(true);
+        setShowForm(true);
     };
 
     const handleSave = async () => {
@@ -139,13 +147,19 @@ export default function Users() {
 
             if (!res.ok) throw new Error("Save failed");
 
-            const saved = await res.json();
+            let saved = await res.json();
 
-            setUsers((prev) =>
-                isEdit ? prev.map((u) => (u.userId === saved.userId ? saved : u)) : [...prev, saved]
+            // normalize roles for table rendering
+            if (saved.roles?.length && typeof saved.roles[0] === "string") {
+                saved.roles = saved.roles.map(r => ({ roleName: r }));
+            }
+
+            setUsers(prev => isEdit
+                ? prev.map(u => u.userId === saved.userId ? saved : u)
+                : [saved, ...prev]
             );
 
-            setShowModal(false);
+            setShowForm(false);
         } catch (err) {
             console.error(err);
             alert("Operation failed");
@@ -164,7 +178,7 @@ export default function Users() {
 
             if (!res.ok) throw new Error("Delete failed");
 
-            setUsers((prev) => prev.filter((u) => u.userId !== userId));
+            setUsers(prev => prev.filter(u => u.userId !== userId));
         } catch (err) {
             console.error(err);
             alert("Failed to remove user");
@@ -176,17 +190,105 @@ export default function Users() {
     if (error) return <p className="text-red-500 text-center mt-6">{error}</p>;
 
     return (
-        <div className="max-w-6xl mx-auto p-4">
+        <div className="w-full mx-auto p-4">
             {/* HEADER */}
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-slate-800">User Management</h2>
                 <button
-                    onClick={openAddModal}
+                    onClick={openAddForm}
                     className="bg-[#00A662] text-white px-5 py-2 rounded font-semibold text-sm hover:bg-[#00804d] transition-colors"
                 >
                     Add New User
                 </button>
             </div>
+
+            {/* INLINE FORM */}
+            {showForm && (
+                <div className="border border-gray-200 rounded-lg p-4 mb-4 bg-white shadow-sm">
+                    <h3 className="text-lg font-semibold mb-3">{isEdit ? "Edit User" : "Add User"}</h3>
+
+                    <input
+                        className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
+                        placeholder="Enter username"
+                        value={formUser.username}
+                        onChange={(e) => setFormUser({ ...formUser, username: e.target.value })}
+                    />
+                    <input
+                        type="email"
+                        className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
+                        placeholder="Enter email"
+                        value={formUser.email}
+                        onChange={(e) => setFormUser({ ...formUser, email: e.target.value })}
+                    />
+
+                    {!isEdit && (
+                        <>
+                            <input
+                                type="password"
+                                className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
+                                placeholder="Enter password"
+                                value={formUser.password}
+                                onChange={(e) => setFormUser({ ...formUser, password: e.target.value })}
+                            />
+                            <input
+                                type="password"
+                                className={`w-full border border-gray-300 rounded px-3 py-2 mb-3 ${
+                                    formUser.confirmPassword && formUser.password !== formUser.confirmPassword
+                                        ? "border-red-500"
+                                        : ""
+                                }`}
+                                placeholder="Confirm password"
+                                value={formUser.confirmPassword}
+                                onChange={(e) => setFormUser({ ...formUser, confirmPassword: e.target.value })}
+                            />
+                            {formUser.confirmPassword && formUser.password !== formUser.confirmPassword && (
+                                <p className="text-red-500 text-sm mb-3">Passwords do not match</p>
+                            )}
+                        </>
+                    )}
+
+                    <select
+                        className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
+                        value={formUser.role}
+                        onChange={(e) => setFormUser({ ...formUser, role: e.target.value })}
+                    >
+                        <option value="NORMAL_USER">Normal User</option>
+                        <option value="ADMIN">Admin</option>
+                        <option value="CEO">CEO</option>
+                    </select>
+
+                    {isEdit && (
+                        <div className="border border-gray-200 rounded p-3 mb-3 max-h-40 overflow-y-auto">
+                            <p className="text-sm font-semibold mb-2 text-gray-600">Permissions</p>
+                            <div className="grid grid-cols-2 gap-2">
+                                {AVAILABLE_PERMISSIONS.map((perm) => (
+                                    <label key={perm} className="flex items-center gap-2 text-sm">
+                                        <input
+                                            type="checkbox"
+                                            checked={formUser.permissions.includes(perm)}
+                                            onChange={() => togglePermission(perm)}
+                                        />
+                                        {perm.replaceAll("_", " ")}
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex justify-end gap-2">
+                        <button onClick={() => setShowForm(false)} className="px-3 py-1 bg-gray-300 rounded">
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            className="px-3 py-1 bg-[#00A662] text-white rounded disabled:opacity-50"
+                            disabled={!isEdit && formUser.password !== formUser.confirmPassword}
+                        >
+                            {isEdit ? "Update" : "Create"}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* USERS TABLE */}
             <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
@@ -201,13 +303,13 @@ export default function Users() {
                     </tr>
                     </thead>
                     <tbody>
-                    {users.map((u) => {
+                    {users.map(u => {
                         const isActive = String(u.status || "ACTIVE").trim().toUpperCase() === "ACTIVE";
                         return (
                             <tr key={u.userId} className="border-b border-gray-200 hover:bg-gray-50">
                                 <td className="px-4 py-2 font-medium">{u.username}</td>
                                 <td className="px-4 py-2 text-gray-600 truncate">{u.email}</td>
-                                <td className="px-4 py-2 text-gray-500">{u.roles?.[0]?.roleName}</td>
+                                <td className="px-4 py-2 text-gray-500">{u.roles?.[0]?.roleName || "N/A"}</td>
                                 <td className="px-4 py-2">
                     <span
                         className={`px-2 py-1 text-xs font-medium rounded ${
@@ -219,7 +321,7 @@ export default function Users() {
                                 </td>
                                 <td className="px-4 py-2 text-right flex justify-end gap-2">
                                     <button
-                                        onClick={() => openEditModal(u)}
+                                        onClick={() => openEditForm(u)}
                                         className="text-blue-600 hover:text-blue-800"
                                         title="Edit user"
                                     >
@@ -239,100 +341,6 @@ export default function Users() {
                     </tbody>
                 </table>
             </div>
-
-            {/* MODAL */}
-            {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-96 border border-gray-200 shadow-md">
-                        <h3 className="text-lg font-semibold mb-4">{isEdit ? "Edit User" : "Add User"}</h3>
-
-                        <input
-                            className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
-                            placeholder="Username"
-                            value={formUser.username}
-                            onChange={(e) => setFormUser({ ...formUser, username: e.target.value })}
-                        />
-
-                        <input
-                            type="email"
-                            className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
-                            placeholder="Email"
-                            value={formUser.email}
-                            onChange={(e) => setFormUser({ ...formUser, email: e.target.value })}
-                        />
-
-                        {!isEdit && (
-                            <>
-                                <input
-                                    type="password"
-                                    className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
-                                    placeholder="Password"
-                                    value={formUser.password || ""}
-                                    onChange={(e) => setFormUser({ ...formUser, password: e.target.value })}
-                                />
-                                <input
-                                    type="password"
-                                    className={`w-full border border-gray-300 rounded px-3 py-2 mb-3 ${
-                                        formUser.confirmPassword && formUser.password !== formUser.confirmPassword
-                                            ? "border-red-500"
-                                            : ""
-                                    }`}
-                                    placeholder="Confirm Password"
-                                    value={formUser.confirmPassword || ""}
-                                    onChange={(e) => setFormUser({ ...formUser, confirmPassword: e.target.value })}
-                                />
-                                {formUser.confirmPassword && formUser.password !== formUser.confirmPassword && (
-                                    <p className="text-red-500 text-sm mb-3">Passwords do not match</p>
-                                )}
-                            </>
-                        )}
-
-                        <select
-                            className="w-full border border-gray-300 rounded px-3 py-2 mb-3"
-                            value={formUser.role}
-                            onChange={(e) => setFormUser({ ...formUser, role: e.target.value })}
-                        >
-                            <option value="NORMAL_USER">Normal User</option>
-                            <option value="ADMIN">Admin</option>
-                            <option value="CEO">CEO</option>
-                        </select>
-
-                        {isEdit && (
-                            <div className="border border-gray-200 rounded p-3 mb-4 max-h-40 overflow-y-auto">
-                                <p className="text-sm font-semibold mb-2 text-gray-600">Permissions</p>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {AVAILABLE_PERMISSIONS.map((perm) => (
-                                        <label key={perm} className="flex items-center gap-2 text-sm">
-                                            <input
-                                                type="checkbox"
-                                                checked={formUser.permissions.includes(perm)}
-                                                onChange={() => togglePermission(perm)}
-                                            />
-                                            {perm.replaceAll("_", " ")}
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="flex justify-end gap-2">
-                            <button
-                                onClick={() => setShowModal(false)}
-                                className="px-3 py-1 bg-gray-300 rounded"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSave}
-                                className="px-3 py-1 bg-[#00A662] text-white rounded disabled:opacity-50"
-                                disabled={!isEdit && formUser.password !== formUser.confirmPassword}
-                            >
-                                {isEdit ? "Update" : "Create"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

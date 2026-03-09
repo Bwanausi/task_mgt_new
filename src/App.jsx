@@ -3,31 +3,45 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 function ProtectedRoute({ children }) {
-  const { user } = useAuth();
-  return user ? children : <Navigate to="/login" replace />;
+    const { user } = useAuth();
+    return user ? children : <Navigate to="/login" replace />;
 }
 
 export default function App() {
-  return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
-  );
+    return (
+        <AuthProvider>
+            <BrowserRouter>
+
+                {/* TOAST ROOT */}
+                <ToastContainer
+                    position="top-right"
+                    autoClose={3000}
+                    hideProgressBar={false}
+                    newestOnTop
+                    closeOnClick
+                    pauseOnHover
+                    draggable
+                    theme="light"
+                />
+
+                <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route
+                        path="/dashboard"
+                        element={
+                            <ProtectedRoute>
+                                <Dashboard />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route path="*" element={<Navigate to="/login" replace />} />
+                </Routes>
+
+            </BrowserRouter>
+        </AuthProvider>
+    );
 }
-
-
-

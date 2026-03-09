@@ -1,3 +1,4 @@
+// Topbar.jsx
 import { FaSearch, FaUserCircle, FaCog, FaSignOutAlt, FaBell } from "react-icons/fa";
 import profile from "../assets/img/prof.jpg";
 import logo from "../assets/img/tfc.png";
@@ -54,15 +55,8 @@ export default function Topbar({ user, onLogout }) {
 
     const unreadCount = notifications.filter((n) => !n.read).length;
 
-    // 🔥 FIXED HANDLER
     const handleNotificationClick = async (notifId) => {
-        console.log("Clicked notification:", notifId); // 👈 DEBUG
-
-        if (!token) {
-            console.error("No token found");
-            return;
-        }
-
+        if (!token) return;
         if (loadingIds.includes(notifId)) return;
 
         setLoadingIds((prev) => [...prev, notifId]);
@@ -79,15 +73,10 @@ export default function Topbar({ user, onLogout }) {
                 }
             );
 
-            console.log("Backend response:", res.status); // 👈 DEBUG
-
             if (!res.ok) throw new Error("Mark as read failed");
 
-            // Update UI
             setNotifications((prev) =>
-                prev.map((n) =>
-                    n.id === notifId ? { ...n, read: true } : n
-                )
+                prev.map((n) => (n.id === notifId ? { ...n, read: true } : n))
             );
         } catch (err) {
             console.error("Mark as read error:", err);
@@ -100,9 +89,10 @@ export default function Topbar({ user, onLogout }) {
         <header className="w-full bg-white border-b border-gray-200 shadow-sm">
             <div className="flex items-center justify-between px-6 py-2">
 
-                {/* LOGO */}
-                <div className="flex items-center h-12">
+                {/* LOGO + TEXT */}
+                <div className="flex items-center h-12 gap-2">
                     <img src={logo} alt="TFC Logo" className="h-10 w-auto object-contain" />
+                    <span className="text-xl font-bold text-[#00A662]">TFC Maagizo</span>
                 </div>
 
                 {/* SEARCH */}
@@ -129,8 +119,8 @@ export default function Topbar({ user, onLogout }) {
                             <FaBell size={18} />
                             {unreadCount > 0 && (
                                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 rounded-full">
-                  {unreadCount}
-                </span>
+                                    {unreadCount}
+                                </span>
                             )}
                         </button>
 
@@ -152,7 +142,7 @@ export default function Topbar({ user, onLogout }) {
                                             <div
                                                 key={n.id}
                                                 onClick={(e) => {
-                                                    e.stopPropagation(); // 🔥 prevent dropdown close
+                                                    e.stopPropagation();
                                                     handleNotificationClick(n.id);
                                                 }}
                                                 className={`px-4 py-3 flex gap-3 border-b border-gray-200 cursor-pointer
@@ -164,8 +154,8 @@ export default function Topbar({ user, onLogout }) {
                                                 <div className="flex-1">
                                                     <p className="text-sm">{n.message}</p>
                                                     <span className="text-xs text-gray-400">
-                            {new Date(n.createdAt).toLocaleString()}
-                          </span>
+                                                        {new Date(n.createdAt).toLocaleString()}
+                                                    </span>
                                                 </div>
                                                 {loadingIds.includes(n.id) && <span>⏳</span>}
                                             </div>

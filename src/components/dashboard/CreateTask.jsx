@@ -28,8 +28,10 @@ export default function CreateTask({ onTaskAdded }) {
     const [userSearch, setUserSearch] = useState("");
     const [errors, setErrors] = useState({});
     const [showUserDropdown, setShowUserDropdown] = useState(false);
+    const [creating, setCreating] = useState(false);
     const dropdownRef = useRef(null);
 
+    // Fetch users
     useEffect(() => {
         const fetchUsers = async () => {
             try {
@@ -66,7 +68,6 @@ export default function CreateTask({ onTaskAdded }) {
     const handleAddTask = async (e) => {
         e.preventDefault();
 
-        // Validation
         const validationErrors = {};
         if (!newTask.title.trim()) validationErrors.title = "Title required";
         if (!newTask.categories.length) validationErrors.categories = "Select at least one category";
@@ -79,9 +80,9 @@ export default function CreateTask({ onTaskAdded }) {
         }
 
         setErrors({});
+        setCreating(true);
 
         try {
-            // Prepare AddTaskDto
             const taskDto = {
                 title: newTask.title,
                 description: newTask.description,
@@ -98,7 +99,7 @@ export default function CreateTask({ onTaskAdded }) {
 
             const res = await fetch(`${API_BASE}/add`, {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}` }, // Do NOT set Content-Type manually
+                headers: { Authorization: `Bearer ${token}` },
                 body: formData
             });
 
@@ -107,7 +108,6 @@ export default function CreateTask({ onTaskAdded }) {
             const savedTask = await res.json();
             if (onTaskAdded) onTaskAdded(savedTask);
 
-            // Reset form
             setNewTask({
                 title: "",
                 description: "",
@@ -124,16 +124,18 @@ export default function CreateTask({ onTaskAdded }) {
         } catch (err) {
             console.error(err);
             alert("Failed to add task");
+        } finally {
+            setCreating(false);
         }
     };
 
     return (
-        <div className="max-w-3xl mx-auto bg-white p-5 border border-gray-200 rounded shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">Create New Task</h2>
+        <div className="w-full mx-auto p-4 sm:p-6 bg-white border border-gray-200 rounded shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Create New Task</h2>
 
-            <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleAddTask}>
+            <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={handleAddTask}>
 
-                {/* TITLE */}
+                {/* Title */}
                 <div className="flex flex-col">
                     <label className="mb-1 text-sm font-medium">Title</label>
                     <input
@@ -146,7 +148,7 @@ export default function CreateTask({ onTaskAdded }) {
                     {errors.title && <p className="text-red-500 text-xs mt-0.5">{errors.title}</p>}
                 </div>
 
-                {/* DUE DATE */}
+                {/* Due Date */}
                 <div className="flex flex-col">
                     <label className="mb-1 text-sm font-medium">Due Date & Time</label>
                     <input
@@ -158,8 +160,8 @@ export default function CreateTask({ onTaskAdded }) {
                     {errors.dueDate && <p className="text-red-500 text-xs mt-0.5">{errors.dueDate}</p>}
                 </div>
 
-                {/* DESCRIPTION */}
-                <div className="md:col-span-2 flex flex-col">
+                {/* Description */}
+                <div className="sm:col-span-2 flex flex-col">
                     <label className="mb-1 text-sm font-medium">Description</label>
                     <textarea
                         placeholder="Task description"
@@ -170,8 +172,8 @@ export default function CreateTask({ onTaskAdded }) {
                     />
                 </div>
 
-                {/* ATTACHMENT */}
-                <div className="md:col-span-2 flex flex-col">
+                {/* Attachment */}
+                <div className="sm:col-span-2 flex flex-col">
                     <label className="mb-1 text-sm font-medium">Attachment (optional)</label>
                     <input
                         type="file"
@@ -180,7 +182,7 @@ export default function CreateTask({ onTaskAdded }) {
                     />
                 </div>
 
-                {/* PRIORITY */}
+                {/* Priority */}
                 <div className="flex flex-col">
                     <label className="mb-1 text-sm font-medium">Priority</label>
                     <select
@@ -192,7 +194,7 @@ export default function CreateTask({ onTaskAdded }) {
                     </select>
                 </div>
 
-                {/* STATUS */}
+                {/* Status */}
                 <div className="flex flex-col">
                     <label className="mb-1 text-sm font-medium">Status</label>
                     <select
@@ -204,8 +206,8 @@ export default function CreateTask({ onTaskAdded }) {
                     </select>
                 </div>
 
-                {/* CATEGORIES */}
-                <div className="md:col-span-2 flex flex-col border border-gray-300 p-2 rounded">
+                {/* Categories */}
+                <div className="sm:col-span-2 flex flex-col border border-gray-300 p-2 rounded">
                     <label className="mb-1 text-sm font-medium">Categories</label>
                     <div className="flex flex-wrap gap-2">
                         {CATEGORY_OPTIONS.map(cat => (
@@ -222,8 +224,8 @@ export default function CreateTask({ onTaskAdded }) {
                     {errors.categories && <p className="text-red-500 text-xs mt-0.5">{errors.categories}</p>}
                 </div>
 
-                {/* ASSIGN USER */}
-                <div className="md:col-span-2 relative flex flex-col" ref={dropdownRef}>
+                {/* Assign User */}
+                <div className="sm:col-span-2 relative flex flex-col" ref={dropdownRef}>
                     <label className="mb-1 text-sm font-medium">Assign User</label>
                     <input
                         type="text"
@@ -252,13 +254,15 @@ export default function CreateTask({ onTaskAdded }) {
                     {errors.assignedTo && <p className="text-red-500 text-xs mt-0.5">{errors.assignedTo}</p>}
                 </div>
 
-                {/* SUBMIT BUTTON */}
-                <div className="md:col-span-2 flex justify-end">
+                {/* Submit */}
+                <div className="sm:col-span-2 flex justify-end">
                     <button
                         type="submit"
-                        className="bg-[#00A662] text-white text-sm px-4 py-1 rounded hover:bg-[#008f4e] transition"
+                        className={`bg-[#00A662] text-white text-sm px-5 py-2 rounded transition w-full sm:w-auto
+                        ${creating ? "opacity-50 cursor-not-allowed" : "hover:bg-[#008f4e]"}`}
+                        disabled={creating}
                     >
-                        Create Task
+                        {creating ? "Creating..." : "Create Task"}
                     </button>
                 </div>
 

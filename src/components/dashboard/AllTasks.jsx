@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../auth/AuthContext";
 import api from "../../api/axios";
+import TaskDetails from "./TaskDetails";
+import { FaPaperclip } from "react-icons/fa";
 
 export default function AllTask() {
     const { user, token } = useAuth();
@@ -11,10 +13,12 @@ export default function AllTask() {
     const [selectedTask, setSelectedTask] = useState(null);
     const [message, setMessage] = useState("");
     const [comments, setComments] = useState([]);
+    const [commentsLoading, setCommentsLoading] = useState(false);
+    const [commentsError, setCommentsError] = useState(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
 
     const [currentPage, setCurrentPage] = useState(1);
-    const tasksPerPage = 5;
+    const tasksPerPage = 10;
 
     const dropdownRef = useRef(null);
 
@@ -26,56 +30,78 @@ export default function AllTask() {
         REJECTED: "bg-red-200 text-red-800",
     };
 
+    const priorityColor = {
+        LOW: "bg-green-100 text-green-800",
+        MEDIUM: "bg-yellow-100 text-yellow-800",
+        HIGH: "bg-red-100 text-red-800",
+    };
+
+    // ------------------- FETCH TASKS -------------------
+    const fetchTasks = async () => {
+        try {
+            const res = await fetch(API_TASKS, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            setTasks(data);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     useEffect(() => {
-        const fetchTasks = async () => {
-            try {
-                const res = await fetch(API_TASKS, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                const data = await res.json();
-                setTasks(data);
-            } catch (err) {
-                console.error(err);
-            }
-        };
         fetchTasks();
     }, [token]);
 
-    const categories = Array.from(
-        new Set(tasks.flatMap((t) => t.categories.map((c) => c.name)))
-    );
-
-    const filteredTasks = (selectedCategory
-            ? tasks.filter((t) => t.categories.some((c) => c.name === selectedCategory))
-            : tasks
-    ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    const indexOfLastTask = currentPage * tasksPerPage;
-    const indexOfFirstTask = indexOfLastTask - tasksPerPage;
-    const currentTasks = filteredTasks.slice(indexOfFirstTask, indexOfLastTask);
-    const totalPages = Math.ceil(filteredTasks.length / tasksPerPage);
-
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-                setDropdownOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
+    // ------------------- FETCH COMMENTS -------------------
     const fetchComments = async (taskId) => {
+        setCommentsLoading(true);
+        setCommentsError(null);
         try {
             const res = await api.get(`/task/${taskId}/comments`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            setComments(res.data);
+            setComments(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error("Failed to load comments", err);
+            setComments([]);
+            setCommentsError(err.message || "Failed to load comments");
+        } finally {
+            setCommentsLoading(false);
         }
     };
 
+    // ------------------- DOWNLOAD FILE -------------------
+    const downloadFile = async (taskId, filename = "attachment") => {
+        try {
+            const res = await fetch(`http://localhost:8181/api/v1/task/file/${taskId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!res.ok) {
+                alert("Download failed");
+                return;
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("File download error", err);
+            alert("Download failed: " + err.message);
+        }
+    };
+
+    // ------------------- SEND DECISION -------------------
     const sendDecision = async (taskId, statusValue) => {
         try {
             const payload = {
@@ -99,246 +125,213 @@ export default function AllTask() {
         }
     };
 
+    // ------------------- FILTER -------------------
+    const categories = Array.from(
+        new Set(tasks.flatMap((t) => t.categories.map((c) => c.name)))
+    );
+
+    const filteredTasks = (selectedCategory
+            ? tasks.filter((t) =>
+                t.categories.some((c) => c.name === selectedCategory)
+            )
+            : tasks
+    ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const indexOfLastTask = currentPage * tasksPerPage;
+    const indexOfFirstTask = indexOfLastTask - tasksPerPage;
+    const currentTasks = filteredTasks.slice(indexOfFirstTask, indexOfLastTask);
+    const totalPages = Math.ceil(filteredTasks.length / tasksPerPage);
+
+    // ------------------- CLOSE DROPDOWN -------------------
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     return (
-        <div className="max-w-6xl mx-auto p-4 font-sans">
-            {/* HEADER */}
-            <h2 className="text-center text-xl font-semibold text-[#00A662] mb-6">
-                All Task List
-            </h2>
+        <div className="w-full mx-auto p-6 font-sans">
 
-            {/* CATEGORY DROPDOWN */}
-            <div className="mb-4 flex justify-end relative w-60" ref={dropdownRef}>
-                <button
-                    className="w-full border border-gray-300 rounded-full px-4 py-2 shadow-sm text-gray-700 font-medium flex justify-between items-center hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#00A662] transition"
-                    onClick={() => setDropdownOpen(!dropdownOpen)}
-                >
-                    {selectedCategory || "All Categories"}
-                    <svg
-                        className="h-4 w-4 text-gray-400 ml-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                        />
-                    </svg>
-                </button>
-                {dropdownOpen && (
-                    <ul className="absolute mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                        <li
-                            onClick={() => {
-                                setSelectedCategory("");
-                                setDropdownOpen(false);
-                                setCurrentPage(1);
-                            }}
-                            className={`px-4 py-2 cursor-pointer hover:bg-[#00A662]/20 hover:text-[#007f50] ${
-                                selectedCategory === "" ? "bg-[#00A662]/10" : ""
-                            }`}
-                        >
-                            All Categories
-                        </li>
-                        {categories.map((cat) => (
-                            <li
-                                key={cat}
-                                onClick={() => {
-                                    setSelectedCategory(cat);
-                                    setDropdownOpen(false);
-                                    setCurrentPage(1);
-                                }}
-                                className={`px-4 py-2 cursor-pointer hover:bg-[#00A662]/20 hover:text-[#007f50] ${
-                                    selectedCategory === cat ? "bg-[#00A662]/10" : ""
-                                }`}
-                            >
-                                {cat}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
+            <header className="mb-6">
+                <h2 className="text-left text-2xl font-semibold text-slate-800">
+                    All Tasks
+                </h2>
+            </header>
 
-            {/* TABLE */}
-            <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
-                <table className="min-w-full text-sm text-left text-gray-700 border-collapse">
-                    <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
-                    <tr>
-                        <th className="px-4 py-2 border-b border-gray-200">Title</th>
-                        <th className="px-4 py-2 border-b border-gray-200">Due Date</th>
-                        <th className="px-4 py-2 border-b border-gray-200">Assigned To</th>
-                        <th className="px-4 py-2 border-b border-gray-200">Created By</th>
-                        <th className="px-4 py-2 border-b border-gray-200">Categories</th>
-                        <th className="px-4 py-2 border-b border-gray-200">Status</th>
-                    </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                    {currentTasks.map((task) => (
-                        <tr
-                            key={task.id}
-                            onClick={() => {
-                                setSelectedTask(task);
-                                fetchComments(task.id);
-                            }}
-                            className="cursor-pointer hover:bg-gray-50 transition"
-                        >
-                            <td className="px-4 py-2 font-medium">{task.title}</td>
-                            <td className="px-4 py-2 text-red-500">{new Date(task.dueDate).toLocaleString()}</td>
-                            <td className="px-4 py-2">{task.assignedTo?.username}</td>
-                            <td className="px-4 py-2">{task.createdBy?.username}</td>
-                            <td className="px-4 py-2">
-                                {task.categories.map((c) => (
-                                    <span
-                                        key={c.id}
-                                        className="px-2 py-1 bg-gray-100 rounded-full text-xs mr-1"
-                                    >
-                      {c.name}
-                    </span>
-                                ))}
-                            </td>
-                            <td className="px-4 py-2">
-                  <span
-                      className={`px-2 py-1 text-xs font-semibold rounded ${statusColor[task.status]}`}
-                  >
-                    {task.status}
-                  </span>
-                            </td>
-                        </tr>
-                    ))}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* PAGINATION */}
-            {totalPages > 1 && (
-                <div className="flex justify-center mt-4 space-x-2">
-                    <button
-                        onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                        className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                        disabled={currentPage === 1}
-                    >
-                        Prev
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            {!selectedTask ? (
+                <>
+                    {/* CATEGORY DROPDOWN */}
+                    <div className="mb-4 flex justify-end relative w-60" ref={dropdownRef}>
                         <button
-                            key={page}
-                            onClick={() => setCurrentPage(page)}
-                            className={`px-3 py-1 rounded ${
-                                currentPage === page
-                                    ? "bg-[#00A662] text-white"
-                                    : "bg-gray-200 hover:bg-gray-300"
-                            }`}
+                            className="w-full border border-slate-200 rounded-md px-4 py-2 bg-white text-slate-700 font-medium flex justify-between items-center hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#00A662] transition"
+                            onClick={() => setDropdownOpen(!dropdownOpen)}
                         >
-                            {page}
-                        </button>
-                    ))}
-                    <button
-                        onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                        className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                        disabled={currentPage === totalPages}
-                    >
-                        Next
-                    </button>
-                </div>
-            )}
-
-            {/* TASK POPUP MODAL */}
-            {selectedTask && (
-                <div className="fixed inset-0 bg-gray-50 flex justify-center items-center z-50 p-4">
-                    <div className="bg-white w-full max-w-lg max-h-[85vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col font-sans border border-gray-200">
-
-                        {/* HEADER */}
-                        <div className="bg-gradient-to-r from-[#00A662] to-[#007f50] text-white p-5 flex justify-between items-center">
-                            <h3 className="text-xl font-bold truncate">{selectedTask.title}</h3>
-                            <button
-                                onClick={() => {
-                                    setSelectedTask(null);
-                                    setMessage("");
-                                    setComments([]);
-                                }}
-                                className="text-white text-2xl hover:opacity-80 transition"
+                            {selectedCategory || "All Categories"}
+                            <svg
+                                className="h-4 w-4 text-slate-400 ml-2"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
                             >
-                                ✕
-                            </button>
-                        </div>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
 
-                        {/* BODY */}
-                        <div className="p-5 space-y-5 text-gray-700 overflow-y-auto flex-1 leading-relaxed">
-                            <div className="grid grid-cols-3 gap-3 text-sm">
-                                <span className="font-semibold text-gray-500">Description:</span>
-                                <span className="col-span-2">{selectedTask.description}</span>
-
-                                <span className="font-semibold text-gray-500">Due:</span>
-                                <span className="col-span-2">{new Date(selectedTask.dueDate).toLocaleString()}</span>
-
-                                <span className="font-semibold text-gray-500">Assigned To:</span>
-                                <span className="col-span-2">{selectedTask.assignedTo?.username}</span>
-
-                                <span className="font-semibold text-gray-500">Created By:</span>
-                                <span className="col-span-2">{selectedTask.createdBy?.username}</span>
-
-                                <span className="font-semibold text-gray-500">Categories:</span>
-                                <span className="col-span-2">
-                  {selectedTask.categories.map(c => c.name).join(", ")}
-                </span>
-                            </div>
-
-                            <div className="border-t border-gray-200" />
-
-                            <h4 className="font-semibold text-gray-800 text-md">Messages</h4>
-                            {comments.length === 0 && (
-                                <p className="text-sm text-gray-400 italic">No messages yet</p>
-                            )}
-                            {comments.map((c) => (
-                                <div
-                                    key={c.id}
-                                    className={`p-3 rounded-lg text-sm ${
-                                        c.commentBy?.id === user.userId
-                                            ? "bg-green-100"
-                                            : c.role === "CEO"
-                                                ? "bg-yellow-100"
-                                                : "bg-gray-100"
-                                    } border border-gray-200`}
+                        {dropdownOpen && (
+                            <ul className="absolute mt-2 w-full bg-white border border-slate-200 rounded-md shadow-md z-50 max-h-60 overflow-y-auto text-sm">
+                                <li
+                                    onClick={() => {
+                                        setSelectedCategory("");
+                                        setDropdownOpen(false);
+                                        setCurrentPage(1);
+                                    }}
+                                    className="px-4 py-2 cursor-pointer hover:bg-[#00A662]/10"
                                 >
-                                    <p className="mb-1">{c.comment}</p>
-                                    <p className="text-xs text-gray-500">
-                                        {c.commentBy?.id === user.userId ? "ME" : c.role} •{" "}
-                                        {new Date(c.createdAt).toLocaleString()}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
+                                    All Categories
+                                </li>
 
-                        {/* FOOTER - CEO ACTIONS */}
-                        {user.roles?.includes("CEO") && selectedTask.status === "SUBMITTED" && (
-                            <div className="bg-gray-50 p-5 border-t border-gray-200 flex flex-col gap-3">
-                <textarea
-                    rows="3"
-                    placeholder="Enter message..."
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-[#00A662] focus:outline-none placeholder-gray-400"
-                />
-                                <div className="flex justify-end gap-3">
-                                    <button
-                                        onClick={() => sendDecision(selectedTask.id, "APPROVED")}
-                                        className="bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-lg shadow-md transition"
+                                {categories.map((cat) => (
+                                    <li
+                                        key={cat}
+                                        onClick={() => {
+                                            setSelectedCategory(cat);
+                                            setDropdownOpen(false);
+                                            setCurrentPage(1);
+                                        }}
+                                        className="px-4 py-2 cursor-pointer hover:bg-[#00A662]/10"
                                     >
-                                        Approve
-                                    </button>
-                                    <button
-                                        onClick={() => sendDecision(selectedTask.id, "REJECTED")}
-                                        className="bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg shadow-md transition"
-                                    >
-                                        Reject
-                                    </button>
-                                </div>
-                            </div>
+                                        {cat}
+                                    </li>
+                                ))}
+                            </ul>
                         )}
-
                     </div>
-                </div>
+
+                    {/* TASK TABLE */}
+                    <div className="overflow-x-auto border border-slate-200 rounded-md bg-white">
+                        <table className="w-full text-sm text-left text-slate-700 table-auto min-w-max">
+                            <thead className="bg-slate-50 text-slate-600 uppercase text-xs">
+                            <tr>
+                                <th className="px-3 py-1">Title</th>
+                                <th className="px-3 py-1">Due</th>
+                                <th className="px-3 py-1">Assigned</th>
+                                <th className="px-3 py-1">Priority</th>
+                                <th className="px-3 py-1">Categories</th>
+                                <th className="px-3 py-1">Status</th>
+                                <th className="px-3 py-1">File</th>
+                            </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-sm">
+                            {currentTasks.map((task) => (
+                                <tr
+                                    key={task.id}
+                                    onClick={() => {
+                                        setSelectedTask(task);
+                                        fetchComments(task.id);
+                                    }}
+                                    className="cursor-pointer hover:bg-slate-50 transition"
+                                >
+                                    <td className="px-3 py-1 max-w-xs truncate">{task.title}</td>
+                                    <td className="px-3 py-1 text-red-600">{new Date(task.dueDate).toLocaleString()}</td>
+                                    <td className="px-3 py-1 truncate">{task.assignedTo?.username}</td>
+                                    <td className="px-3 py-1">
+                                            <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded ${priorityColor[task.priority]}`}>
+                                                {task.priority}
+                                            </span>
+                                    </td>
+                                    <td className="px-3 py-1">
+                                        <div className="flex flex-wrap gap-2">
+                                            {(task.categories || []).map((c) => (
+                                                <span key={c.id} className="px-2 py-1 bg-gray-100 rounded-full text-xs truncate">
+                                                        {c.name}
+                                                    </span>
+                                            ))}
+                                        </div>
+                                    </td>
+                                    <td className="px-3 py-1">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${statusColor[task.status]}`}>
+                                                {task.status}
+                                            </span>
+                                    </td>
+                                    <td className="px-3 py-1">
+                                        {task.filePath && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    downloadFile(task.id, task.fileName || "attachment");
+                                                }}
+                                                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                                                title="Download file"
+                                            >
+                                                <FaPaperclip />
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* PAGINATION */}
+                    {totalPages > 1 && (
+                        <nav className="flex items-center justify-center mt-4 gap-2 flex-wrap">
+                            <button
+                                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                                className="px-3 py-1 bg-white border border-slate-200 rounded-md hover:shadow-sm"
+                                disabled={currentPage === 1}
+                            >
+                                Prev
+                            </button>
+
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                <button
+                                    key={page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className={`px-3 py-1 rounded-md border ${
+                                        currentPage === page
+                                            ? "bg-[#00A662] text-white border-[#00A662]"
+                                            : "bg-white border-slate-200"
+                                    }`}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+
+                            <button
+                                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                                className="px-3 py-1 bg-white border border-slate-200 rounded-md hover:shadow-sm"
+                                disabled={currentPage === totalPages}
+                            >
+                                Next
+                            </button>
+                        </nav>
+                    )}
+                </>
+            ) : (
+                <TaskDetails
+                    selectedTask={selectedTask}
+                    setSelectedTask={setSelectedTask}
+                    onClose={async () => {
+                        setSelectedTask(null);
+                        setMessage("");
+                        setComments([]);
+                        setCurrentPage(1);
+                        await fetchTasks();
+                    }}
+                    comments={comments}
+                    commentsLoading={commentsLoading}
+                    commentsError={commentsError}
+                    user={user}
+                    token={token}
+                    message={message}
+                    setMessage={setMessage}
+                    sendDecision={sendDecision}
+                />
             )}
         </div>
     );

@@ -1,3 +1,4 @@
+import logo from "../assets/img/tfc.png";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import api from "../api/axios";
@@ -43,14 +44,17 @@ export default function Login() {
               onSubmit={handleSubmit}
               className="bg-white rounded-2xl shadow-xl p-8"
           >
+            {/* Logo */}
+            <div className="flex justify-center mb-4">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-teal-100 flex items-center justify-center bg-white">
+                <img src={logo} alt="Logo" className="w-16 h-16 object-contain" />
+              </div>
+            </div>
+
             {/* Header */}
             <div className="text-center mb-6">
-              <h2 className="text-3xl font-bold text-gray-800">
-                Welcome Back
-              </h2>
-              <p className="text-gray-500 text-sm mt-1">
-                Sign in to continue
-              </p>
+              <h2 className="text-3xl font-bold text-gray-800">Welcome Back</h2>
+              <p className="text-gray-500 text-sm mt-1">Sign in to continue</p>
             </div>
 
             {/* Error */}
