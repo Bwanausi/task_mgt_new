@@ -5,8 +5,7 @@ import TaskDetails from "./TaskDetails";
 import { FaPaperclip } from "react-icons/fa";
 
 export default function AllTask() {
-    const { user, token } = useAuth();
-    const API_TASKS = "http://localhost:8181/api/v1/task/getall";
+    const { user } = useAuth();
 
     const [tasks, setTasks] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState("");
@@ -36,31 +35,27 @@ export default function AllTask() {
         HIGH: "bg-red-100 text-red-800",
     };
 
-    // ------------------- FETCH TASKS -------------------
+    // ---------------- FETCH TASKS ----------------
     const fetchTasks = async () => {
         try {
-            const res = await fetch(API_TASKS, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            const data = await res.json();
-            setTasks(data);
+            const res = await api.get("/task/getall");
+            setTasks(res.data);
         } catch (err) {
-            console.error(err);
+            console.error("Fetch tasks error:", err);
         }
     };
 
     useEffect(() => {
         fetchTasks();
-    }, [token]);
+    }, []);
 
-    // ------------------- FETCH COMMENTS -------------------
+    // ---------------- FETCH COMMENTS ----------------
     const fetchComments = async (taskId) => {
         setCommentsLoading(true);
         setCommentsError(null);
+
         try {
-            const res = await api.get(`/task/${taskId}/comments`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await api.get(`/task/${taskId}/comments`);
             setComments(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error("Failed to load comments", err);
@@ -71,20 +66,14 @@ export default function AllTask() {
         }
     };
 
-    // ------------------- DOWNLOAD FILE -------------------
+    // ---------------- DOWNLOAD FILE ----------------
     const downloadFile = async (taskId, filename = "attachment") => {
         try {
-            const res = await fetch(`http://localhost:8181/api/v1/task/file/${taskId}`, {
-                headers: { Authorization: `Bearer ${token}` },
+            const res = await api.get(`/task/file/${taskId}`, {
+                responseType: "blob",
             });
 
-            if (!res.ok) {
-                alert("Download failed");
-                return;
-            }
-
-            const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
+            const url = window.URL.createObjectURL(new Blob([res.data]));
 
             const a = document.createElement("a");
             a.href = url;
@@ -95,37 +84,40 @@ export default function AllTask() {
             a.remove();
 
             window.URL.revokeObjectURL(url);
+
         } catch (err) {
             console.error("File download error", err);
-            alert("Download failed: " + err.message);
+            alert("Download failed");
         }
     };
 
-    // ------------------- SEND DECISION -------------------
+    // ---------------- SEND DECISION ----------------
     const sendDecision = async (taskId, statusValue) => {
         try {
+
             const payload = {
                 comment: message,
                 commentById: user.userId,
                 status: statusValue,
             };
 
-            await api.post(`/task/submit/${taskId}`, payload, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            await api.post(`/task/submit/${taskId}`, payload);
 
             setTasks((prev) =>
-                prev.map((t) => (t.id === taskId ? { ...t, status: statusValue } : t))
+                prev.map((t) =>
+                    t.id === taskId ? { ...t, status: statusValue } : t
+                )
             );
 
             setSelectedTask(null);
             setMessage("");
+
         } catch (err) {
             console.error("Action failed", err);
         }
     };
 
-    // ------------------- FILTER -------------------
+    // ---------------- FILTER ----------------
     const categories = Array.from(
         new Set(tasks.flatMap((t) => t.categories.map((c) => c.name)))
     );
@@ -142,15 +134,17 @@ export default function AllTask() {
     const currentTasks = filteredTasks.slice(indexOfFirstTask, indexOfLastTask);
     const totalPages = Math.ceil(filteredTasks.length / tasksPerPage);
 
-    // ------------------- CLOSE DROPDOWN -------------------
+    // ---------------- CLOSE DROPDOWN ----------------
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
                 setDropdownOpen(false);
             }
         };
+
         document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     return (
@@ -164,32 +158,25 @@ export default function AllTask() {
 
             {!selectedTask ? (
                 <>
-                    {/* CATEGORY DROPDOWN */}
+                    {/* CATEGORY FILTER */}
                     <div className="mb-4 flex justify-end relative w-60" ref={dropdownRef}>
                         <button
-                            className="w-full border border-slate-200 rounded-md px-4 py-2 bg-white text-slate-700 font-medium flex justify-between items-center hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#00A662] transition"
+                            className="w-full border border-slate-200 rounded-md px-4 py-2 bg-white text-slate-700 font-medium flex justify-between items-center"
                             onClick={() => setDropdownOpen(!dropdownOpen)}
                         >
                             {selectedCategory || "All Categories"}
-                            <svg
-                                className="h-4 w-4 text-slate-400 ml-2"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
                         </button>
 
                         {dropdownOpen && (
-                            <ul className="absolute mt-2 w-full bg-white border border-slate-200 rounded-md shadow-md z-50 max-h-60 overflow-y-auto text-sm">
+                            <ul className="absolute mt-2 w-full bg-white border rounded-md shadow-md z-50">
+
                                 <li
                                     onClick={() => {
                                         setSelectedCategory("");
                                         setDropdownOpen(false);
                                         setCurrentPage(1);
                                     }}
-                                    className="px-4 py-2 cursor-pointer hover:bg-[#00A662]/10"
+                                    className="px-4 py-2 cursor-pointer hover:bg-gray-100"
                                 >
                                     All Categories
                                 </li>
@@ -202,7 +189,7 @@ export default function AllTask() {
                                             setDropdownOpen(false);
                                             setCurrentPage(1);
                                         }}
-                                        className="px-4 py-2 cursor-pointer hover:bg-[#00A662]/10"
+                                        className="px-4 py-2 cursor-pointer hover:bg-gray-100"
                                     >
                                         {cat}
                                     </li>
@@ -212,78 +199,100 @@ export default function AllTask() {
                     </div>
 
                     {/* TASK TABLE */}
-                    <div className="overflow-x-auto border border-slate-200 rounded-md bg-white">
-                        <table className="w-full text-sm text-left text-slate-700 table-auto min-w-max">
-                            <thead className="bg-slate-50 text-slate-600 uppercase text-xs">
+                    <div className="overflow-x-auto border rounded-md bg-white">
+                        <table className="w-full text-sm text-left">
+
+                            <thead className="bg-gray-50 text-xs uppercase">
                             <tr>
-                                <th className="px-3 py-1">Title</th>
-                                <th className="px-3 py-1">Due</th>
-                                <th className="px-3 py-1">Assigned</th>
-                                <th className="px-3 py-1">Priority</th>
-                                <th className="px-3 py-1">Categories</th>
-                                <th className="px-3 py-1">Status</th>
-                                <th className="px-3 py-1">File</th>
+                                <th className="px-3 py-2">Title</th>
+                                <th className="px-3 py-2">Due</th>
+                                <th className="px-3 py-2">Assigned</th>
+                                <th className="px-3 py-2">Priority</th>
+                                <th className="px-3 py-2">Categories</th>
+                                <th className="px-3 py-2">Status</th>
+                                <th className="px-3 py-2">File</th>
                             </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 text-sm">
+
+                            <tbody className="divide-y">
+
                             {currentTasks.map((task) => (
+
                                 <tr
                                     key={task.id}
                                     onClick={() => {
                                         setSelectedTask(task);
                                         fetchComments(task.id);
                                     }}
-                                    className="cursor-pointer hover:bg-slate-50 transition"
+                                    className="cursor-pointer hover:bg-gray-50"
                                 >
-                                    <td className="px-3 py-1 max-w-xs truncate">{task.title}</td>
-                                    <td className="px-3 py-1 text-red-600">{new Date(task.dueDate).toLocaleString()}</td>
-                                    <td className="px-3 py-1 truncate">{task.assignedTo?.username}</td>
-                                    <td className="px-3 py-1">
-                                            <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded ${priorityColor[task.priority]}`}>
+
+                                    <td className="px-3 py-2">{task.title}</td>
+
+                                    <td className="px-3 py-2 text-red-600">
+                                        {new Date(task.dueDate).toLocaleString()}
+                                    </td>
+
+                                    <td className="px-3 py-2">
+                                        {task.assignedTo?.username}
+                                    </td>
+
+                                    <td className="px-3 py-2">
+                                            <span className={`px-2 py-1 rounded text-xs ${priorityColor[task.priority]}`}>
                                                 {task.priority}
                                             </span>
                                     </td>
-                                    <td className="px-3 py-1">
-                                        <div className="flex flex-wrap gap-2">
-                                            {(task.categories || []).map((c) => (
-                                                <span key={c.id} className="px-2 py-1 bg-gray-100 rounded-full text-xs truncate">
-                                                        {c.name}
-                                                    </span>
-                                            ))}
-                                        </div>
+
+                                    <td className="px-3 py-2 flex flex-wrap gap-1">
+                                        {(task.categories || []).map((c) => (
+                                            <span
+                                                key={c.id}
+                                                className="px-2 py-1 bg-gray-100 rounded text-xs"
+                                            >
+                                                    {c.name}
+                                                </span>
+                                        ))}
                                     </td>
-                                    <td className="px-3 py-1">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${statusColor[task.status]}`}>
+
+                                    <td className="px-3 py-2">
+                                            <span className={`px-2 py-1 rounded text-xs ${statusColor[task.status]}`}>
                                                 {task.status}
                                             </span>
                                     </td>
-                                    <td className="px-3 py-1">
+
+                                    <td className="px-3 py-2">
                                         {task.filePath && (
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     downloadFile(task.id, task.fileName || "attachment");
                                                 }}
-                                                className="text-slate-400 hover:text-slate-600 cursor-pointer"
-                                                title="Download file"
+                                                className="text-gray-500 hover:text-gray-700"
                                             >
                                                 <FaPaperclip />
                                             </button>
                                         )}
                                     </td>
+
                                 </tr>
+
                             ))}
+
                             </tbody>
+
                         </table>
                     </div>
 
                     {/* PAGINATION */}
                     {totalPages > 1 && (
-                        <nav className="flex items-center justify-center mt-4 gap-2 flex-wrap">
+                        <div className="flex justify-center mt-4 gap-2">
+
                             <button
-                                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                                className="px-3 py-1 bg-white border border-slate-200 rounded-md hover:shadow-sm"
+                                onClick={() =>
+                                    setCurrentPage((p) => Math.max(p - 1, 1))
+                                }
                                 disabled={currentPage === 1}
+                                className="px-3 py-1 border rounded"
                             >
                                 Prev
                             </button>
@@ -292,10 +301,8 @@ export default function AllTask() {
                                 <button
                                     key={page}
                                     onClick={() => setCurrentPage(page)}
-                                    className={`px-3 py-1 rounded-md border ${
-                                        currentPage === page
-                                            ? "bg-[#00A662] text-white border-[#00A662]"
-                                            : "bg-white border-slate-200"
+                                    className={`px-3 py-1 border rounded ${
+                                        currentPage === page ? "bg-green-600 text-white" : ""
                                     }`}
                                 >
                                     {page}
@@ -303,36 +310,31 @@ export default function AllTask() {
                             ))}
 
                             <button
-                                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                                className="px-3 py-1 bg-white border border-slate-200 rounded-md hover:shadow-sm"
+                                onClick={() =>
+                                    setCurrentPage((p) => Math.min(p + 1, totalPages))
+                                }
                                 disabled={currentPage === totalPages}
+                                className="px-3 py-1 border rounded"
                             >
                                 Next
                             </button>
-                        </nav>
+
+                        </div>
                     )}
                 </>
             ) : (
                 <TaskDetails
                     selectedTask={selectedTask}
                     setSelectedTask={setSelectedTask}
-                    onClose={async () => {
-                        setSelectedTask(null);
-                        setMessage("");
-                        setComments([]);
-                        setCurrentPage(1);
-                        await fetchTasks();
-                    }}
                     comments={comments}
                     commentsLoading={commentsLoading}
                     commentsError={commentsError}
-                    user={user}
-                    token={token}
                     message={message}
                     setMessage={setMessage}
                     sendDecision={sendDecision}
                 />
             )}
+
         </div>
     );
 }
